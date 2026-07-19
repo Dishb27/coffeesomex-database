@@ -1,0 +1,245 @@
+.detailContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  background: var(--bg-light, #faf6ee);
+  min-height: 80vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.backBtn {
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  color: var(--copper, #a8632c);
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.backBtn:hover {
+  background: var(--gold-bg, #f3e6cc);
+}
+
+.header h2 {
+  font-family: var(--font-display, "Fraunces", serif);
+  font-size: 2rem;
+  font-weight: 500;
+  color: var(--ink-on-light, #2a2016);
+  margin: 0;
+}
+
+.geneCountBadge {
+  background: var(--copper, #a8632c);
+  color: #fff;
+  padding: 0.2rem 1rem;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.searchWrapper {
+  max-width: 400px;
+  margin-bottom: 2rem;
+}
+.searchInput {
+  width: 100%;
+  padding: 0.6rem 1rem 0.6rem 2.5rem;
+  border: 1px solid var(--line-on-light, #ddd);
+  border-radius: 50px;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239c8f78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E")
+    no-repeat 0.75rem center;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.searchInput:focus {
+  border-color: var(--copper, #a8632c);
+  box-shadow: 0 0 0 3px rgba(168, 99, 44, 0.1);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--line-on-light, #e0d8d0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.geneTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.geneTable th {
+  background: var(--bg-light, #f4efe6);
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--ink-on-light-dim, #555);
+  border-bottom: 2px solid var(--line-on-light, #ddd);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.geneTable td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line-on-light, #eee);
+  color: var(--ink-on-light-dim, #444);
+}
+.geneTable tbody tr:hover {
+  background: var(--gold-bg, #f3e6cc);
+}
+.geneTable code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  background: #f0ebe4;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+.desc {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.biotypeBadge {
+  display: inline-block;
+  background: var(--gold-bg, #f3e6cc);
+  color: var(--gold, #a97e3d);
+  padding: 0.15rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.noData {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.pagination button {
+  padding: 0.4rem 1.2rem;
+  border: 1px solid var(--line-on-light, #ddd);
+  border-radius: 50px;
+  background: #fff;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.pagination button:hover:not(:disabled) {
+  background: var(--copper, #a8632c);
+  color: #fff;
+  border-color: var(--copper);
+}
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pagination span {
+  font-size: 0.9rem;
+  color: var(--ink-on-light-dim, #666);
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 3rem 0;
+  color: var(--ink-on-light-dim, #666);
+}
+.error {
+  color: #c0392b;
+}
+
+.pageWrapper {
+  background: var(--bg-light, #faf6ee);
+  min-height: 100vh;
+  width: 100%;
+}
+
+.detailContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  /* background removed – now on wrapper */
+}
+
+/* rest of the styles unchanged */
+.desc {
+  width: 450px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.skeletonLoadingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem 0 1.5rem;
+}
+.skeletonDna {
+  font-size: 1.4rem;
+  color: var(--gold, #c9a24b);
+  animation: sk-dna-pulse 1.6s ease-in-out infinite;
+}
+@keyframes sk-dna-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+.skeletonLoadingText {
+  font-size: 0.95rem;
+  color: var(--text-muted, #b8b0a3);
+}
+.skeletonDots span {
+  animation: sk-dot-fade 1.4s infinite;
+  opacity: 0;
+}
+.skeletonDots span:nth-child(1) { animation-delay: 0s; }
+.skeletonDots span:nth-child(2) { animation-delay: 0.2s; }
+.skeletonDots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes sk-dot-fade {
+  0%, 80%, 100% { opacity: 0; }
+  40%           { opacity: 1; }
+}
+.skeletonRow td { padding: 0.75rem 1rem; }
+.skeletonCell {
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(201, 162, 75, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+.skeletonCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(201, 162, 75, 0.15) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: sk-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes sk-shimmer {
+  100% { transform: translateX(100%); }
+}
+.fadeIn {
+  animation: sk-fade-in-up 0.4s ease both;
+}
+@keyframes sk-fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

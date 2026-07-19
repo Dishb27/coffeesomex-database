@@ -1,0 +1,218 @@
+.pageWrapper {
+  background: var(--bg-light, #faf6ee);
+  min-height: 100vh;
+  width: 100%;
+}
+.detailContainer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 3rem;
+}
+
+.topNav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line-on-light, #ddd);
+}
+.backBtn,
+.homeBtn {
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  color: var(--copper, #a8632c);
+  cursor: pointer;
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.backBtn:hover,
+.homeBtn:hover {
+  background: var(--gold-bg, #f3e6cc);
+}
+.navTitle {
+  font-family: var(--font-display, "Fraunces", serif);
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--ink-on-light, #2a2016);
+  margin-left: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.header h1 {
+  font-family: var(--font-display, "Fraunces", serif);
+  font-size: 2.4rem;
+  font-weight: 500;
+  color: var(--ink-on-light, #2a2016);
+  margin: 0;
+}
+.hubBadge {
+  background: #f6c94a;
+  color: #2a2016;
+  padding: 0.2rem 1rem;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.description {
+  font-size: 1.1rem;
+  color: var(--ink-on-light-dim, #555);
+  line-height: 1.6;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  background: #fff;
+  padding: 1rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--line-on-light, #e0d8d0);
+  margin-bottom: 2rem;
+}
+.metaGrid > div {
+  display: flex;
+  flex-direction: column;
+}
+.metaLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-on-light-faint, #999);
+  font-weight: 600;
+}
+.metaGrid code {
+  font-family: var(--font-mono, monospace);
+  background: #f0ebe4;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+.biotypeBadge {
+  display: inline-block;
+  background: var(--gold-bg, #f3e6cc);
+  color: var(--gold, #a97e3d);
+  padding: 0.15rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.expressionSection h3 {
+  font-family: var(--font-display, "Fraunces", serif);
+  font-size: 1.4rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: var(--ink-on-light, #2a2016);
+}
+.noData {
+  padding: 2rem 0;
+  color: var(--ink-on-light-faint, #999);
+  font-style: italic;
+}
+.chartWrapper {
+  background: #fff;
+  border: 1px solid var(--line-on-light, #e0d8d0);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4rem 0;
+}
+.stageLabel {
+  width: 60px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink-on-light-dim, #555);
+}
+.barTrack {
+  flex: 1;
+  height: 12px;
+  background: #f0ebe4;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  background: var(--copper, #a8632c);
+  border-radius: 20px;
+  transition: width 0.6s ease;
+}
+.barValue {
+  width: 60px;
+  text-align: right;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  color: var(--ink-on-light-dim, #555);
+}
+
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+}
+.primaryBtn {
+  padding: 0.6rem 1.8rem;
+  background: var(--copper, #a8632c);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.primaryBtn:hover {
+  background: var(--copper-bright, #c97a38);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(168, 99, 44, 0.25);
+}
+
+.loadingContainer,
+.errorContainer {
+  text-align: center;
+  padding: 4rem 0;
+  color: var(--ink-on-light-dim, #666);
+}
+.errorContainer {
+  color: #c0392b;
+}
+
+/* ── Full‑height scroll container ── */
+.gridScrollContainer {
+  flex: 1;
+  overflow: auto; /* scroll both directions */
+  background: #f5ede4; /* matches the grid background */
+  padding: 0 0 20px 0; /* optional bottom padding */
+  /* Remove any max-height restriction – it will fill parent */
+}
+
+/* Make sure the app container uses flex column */
+.appContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100vh;
+}
+
+/* Adjust hero to not take too much space */
+.heroSection {
+  flex-shrink: 0;
+  padding: 1rem 1rem 0.5rem;
+}
