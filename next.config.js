@@ -9,6 +9,7 @@ const nextConfig = {
     config.resolve.alias["@"] = path.resolve(__dirname, "src");
     return config;
   },
+  staticPageGenerationTimeout: 300, // ✅ 5 minutes – enough for the first DB connection
 };
 
 module.exports = nextConfig;
