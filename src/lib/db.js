@@ -8,14 +8,15 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  ssl: {
+    rejectUnauthorized: false, // ✅ Required for Aiven
+  },
 });
 
-// Export a function that returns the pool (used by grn-data.js)
 export function getPool() {
   return pool;
 }
 
-// Existing query helper (if you want to keep it)
 export async function query(sql, values) {
   const [rows] = await pool.query(sql, values);
   return rows;
