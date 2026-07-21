@@ -231,8 +231,8 @@ export default async function GenePage({ params }) {
     console.log("6️⃣ Fetching expression...");
     const expressionRows = await query(
       `SELECT s.sample_id, s.sample_name, s.stage_tag, s.replicate, e.expression
-       FROM expression e JOIN samples s ON e.sample_id = s.sample_id
-       WHERE e.gene_id = ? ORDER BY s.stage_tag, s.replicate`,
+   FROM expression e JOIN samples s ON e.stage_tag = s.stage_tag
+   WHERE e.gene_id = ? ORDER BY s.stage_tag, s.replicate`,
       [geneId],
     );
     console.log(`   Expression rows: ${expressionRows.length}`);
