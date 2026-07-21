@@ -327,8 +327,43 @@ export default function GeneSearchPage() {
   const [showContact, setShowContact] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState(null);
 
+  // ── TF families state (now with gene counts) ──
+  const [tfData, setTfData] = useState([]); // array of { family, gene_count }
+  const [familiesLoading, setFamiliesLoading] = useState(true);
+
   const exploreRef = useReveal();
 
+  // ── Fetch TF family data ──
+  useEffect(() => {
+    async function fetchFamilies() {
+      try {
+        const res = await fetch("/api/tf-families");
+        if (!res.ok) throw new Error("Failed to fetch families");
+        const data = await res.json();
+        // Expect data: [{ family: "bHLH", gene_count: 230 }, ...]
+        setTfData(data);
+      } catch (err) {
+        console.error("Error fetching TF families:", err);
+        // Fallback with dummy counts for preview
+        const fallback = [
+          "bHLH",
+          "MYB",
+          "WRKY",
+          "NAC",
+          "AP2/ERF",
+          "bZIP",
+          "MADS",
+          "GRAS",
+        ].map((f, i) => ({ family: f, gene_count: 150 - i * 10 }));
+        setTfData(fallback);
+      } finally {
+        setFamiliesLoading(false);
+      }
+    }
+    fetchFamilies();
+  }, []);
+
+  // ── Handlers ──
   async function handleSearch(id) {
     const query = (id || geneId).trim();
     if (!query) return;
@@ -344,7 +379,10 @@ export default function GeneSearchPage() {
     router.push(path);
   }
 
-  const tfFamilyPreview = ["bHLH", "MYB", "WRKY", "NAC", "AP2/ERF", "bZIP"];
+  // ── Word cloud scaling ──
+  const maxCount = tfData.length
+    ? Math.max(...tfData.map((f) => f.gene_count))
+    : 1;
 
   return (
     <div className="landing-page">
@@ -410,7 +448,6 @@ export default function GeneSearchPage() {
             </span>
           </p>
 
-          {/* ── Creative Explore Button ── */}
           <button
             type="button"
             className="hero-explore-btn"
@@ -571,7 +608,7 @@ export default function GeneSearchPage() {
                 </svg>
               </div>
 
-              {/* ── Right: TF Families ── */}
+              {/* ── Right: TF Families – WORD CLOUD ── */}
               <div
                 className={`dual-panel tf-panel ${
                   navigatingTo === "tfs" ? "is-loading" : ""
@@ -587,21 +624,37 @@ export default function GeneSearchPage() {
                 <div className="panel-icon">
                   <Dna size={24} strokeWidth={1.5} />
                 </div>
-                <h3>Transcription Factor Families</h3>
-                <p>
-                  Browse annotated TF families and the regulatory genes within
-                  each.
-                </p>
+                <h3>Explore TF Families</h3>
 
-                <div className="tf-badge-cloud">
-                  {tfFamilyPreview.map((f) => (
-                    <span className="family-badge" key={f}>
-                      {f}
-                    </span>
-                  ))}
-                  <span className="family-badge family-badge-more">
-                    +18 more
-                  </span>
+                {/* ── Word Cloud ── */}
+                <div className="tf-word-cloud">
+                  {familiesLoading ? (
+                    <span className="cloud-loading">Loading families…</span>
+                  ) : (
+                    tfData.map(({ family, gene_count }) => {
+                      // Scale font size between 0.7rem and 1.4rem
+                      const minSize = 0.7;
+                      const maxSize = 1.4;
+                      const size =
+                        maxCount > 0
+                          ? minSize +
+                            (gene_count / maxCount) * (maxSize - minSize)
+                          : minSize;
+                      return (
+                        <span
+                          key={family}
+                          className="cloud-term"
+                          style={{
+                            fontSize: `${size}rem`,
+                            fontWeight: gene_count > maxCount * 0.7 ? 600 : 400,
+                            opacity: 0.5 + (gene_count / maxCount) * 0.5,
+                          }}
+                        >
+                          {family}
+                        </span>
+                      );
+                    })
+                  )}
                 </div>
 
                 <div className="tf-panel-cta">
@@ -658,10 +711,7 @@ export default function GeneSearchPage() {
                 <div className="feature-card-icon">
                   <GitMerge size={26} strokeWidth={1.5} />
                 </div>
-                <h3>DEG Comparisons</h3>
-                <p className="feature-card-desc">
-                  Compare expression across stages
-                </p>
+                <h3>Explore SE Developmental Stage Comparisons</h3>
                 <div className="feature-card-footer">
                   <span className="feature-card-chip">
                     {navigatingTo === "comparisions" ? (
@@ -692,10 +742,7 @@ export default function GeneSearchPage() {
                 <div className="feature-card-icon">
                   <Network size={26} strokeWidth={1.5} />
                 </div>
-                <h3>Hub Genes</h3>
-                <p className="feature-card-desc">
-                  Master regulators with high connectivity
-                </p>
+                <h3>Explore Hub Genes</h3>
                 <div className="feature-card-footer">
                   <span className="feature-card-chip">
                     {navigatingTo === "hubs" ? (
@@ -711,16 +758,16 @@ export default function GeneSearchPage() {
             {/* Regulatory Networks */}
             <div
               className={`feature-card network-card ${
-                navigatingTo === "networks" ? "is-loading" : ""
+                navigatingTo === "network" ? "is-loading" : ""
               } ${
-                navigatingTo && navigatingTo !== "networks" ? "is-disabled" : ""
+                navigatingTo && navigatingTo !== "network" ? "is-disabled" : ""
               }`}
               role="button"
-              tabIndex={navigatingTo && navigatingTo !== "networks" ? -1 : 0}
-              aria-busy={navigatingTo === "networks"}
-              onClick={() => handleExplorerNav("networks", "/networks")}
+              tabIndex={navigatingTo && navigatingTo !== "network" ? -1 : 0}
+              aria-busy={navigatingTo === "network"}
+              onClick={() => handleExplorerNav("network", "/network")}
               onKeyDown={(e) =>
-                e.key === "Enter" && handleExplorerNav("networks", "/networks")
+                e.key === "Enter" && handleExplorerNav("network", "/network")
               }
             >
               <NetworkGraphBG large={true} />
@@ -728,13 +775,10 @@ export default function GeneSearchPage() {
                 <div className="feature-card-icon">
                   <Dna size={26} strokeWidth={1.5} />
                 </div>
-                <h3>Regulatory Networks</h3>
-                <p className="feature-card-desc">
-                  Visualise gene‑gene interactions
-                </p>
+                <h3>Explore Regulatory Networks</h3>
                 <div className="feature-card-footer">
                   <span className="feature-card-chip">
-                    {navigatingTo === "networks" ? (
+                    {navigatingTo === "network" ? (
                       <Loader2 size={16} className="explorer-card-spinner" />
                     ) : (
                       "→"
@@ -754,8 +798,8 @@ export default function GeneSearchPage() {
         <div className="stats-inner">
           {[
             { num: "12", label: "SE Developmental stages" },
-            { num: "56", label: "Upregulated genes" },
-            { num: "230", label: "Downregulated genes" },
+            { num: "22850", label: "Differentially expressed genes" },
+            { num: "23", label: "Co-expression modules" },
             { num: "230", label: "Hub genes" },
           ].map((s, i) => (
             <div

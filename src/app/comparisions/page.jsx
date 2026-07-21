@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { VolcanoPlot } from "@/components/VolcanoPlot";
+import SiteHeader from "@/components/SiteHeader";
+
 
 export default function ComparisionsPage() {
   const router = useRouter();
@@ -171,17 +173,12 @@ export default function ComparisionsPage() {
 
   return (
     <>
-      {/* Navigation bar using global CSS classes */}
-      <nav className="topNav">
-        <button className="homeBtn" onClick={() => router.push("/")}>
-          <i className="fas fa-home"></i> Home
-        </button>
-        <span className="navTitle"></span>
-      </nav>
+      <SiteHeader pageTitle="SE Developmetal stage comparisons explorer" />
+      
 
       <div className="comparisions-page">
         <div className="comparisions-header">
-          <h2>Developmental stage comparisons</h2>
+          {/* <h2>Developmental stage comparisons</h2> */}
           <p>
             Explore differentially expressed genes across{" "}
             <em>Coffea arabica</em> somatic embryo developmental stages. Select

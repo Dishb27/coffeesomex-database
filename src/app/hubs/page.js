@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./hubs.module.css";
+import SiteHeader from "@/components/SiteHeader";
+
 
 export default function HubGenes() {
   const [hubGenes, setHubGenes] = useState([]);
@@ -55,15 +57,10 @@ export default function HubGenes() {
 
   return (
     <div className={styles.appContainer}>
-      <nav className={styles.topNav}>
-        <button className={styles.homeBtn} onClick={goHome}>
-          <i className="fas fa-home"></i> Home
-        </button>
-        {/* <span className={styles.navTitle}>Hub Genes Explorer</span> */}
-      </nav>
+      <SiteHeader pageTitle="Hub Genes Explorer" />
 
       <div className={styles.heroSection}>
-        <h2>Hub Genes Explorer</h2>
+        {/* <h2>Hub Genes Explorer</h2> */}
         <p>
           Explore potential hub genes associated with <em>Coffea arabica</em>{" "}
           somatic embryogenesis.

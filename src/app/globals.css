@@ -828,7 +828,7 @@ body {
   min-height: 100vh;
   padding: 0 24px 40px;
 
-  padding-top: 80px
+  padding-top: 80px;
 }
 .gene-page-container .gene-page-inner {
   max-width: 1100px;
@@ -1484,6 +1484,7 @@ body {
   max-width: 1200px;
   margin: 0 auto 32px;
   text-align: center;
+  margin-top: 50px;
 }
 .comparisions-header h2 {
   font-family: var(--font-display, "Fraunces", serif);
@@ -1500,6 +1501,7 @@ body {
   font-weight: 300;
   text-align: center;
   margin: 0 auto;
+  margin-top: 60px;
   line-height: 1.6;
 }
 .comparisions-loading,
@@ -2830,5 +2832,112 @@ body {
   .site-page-title {
     font-size: 10px;
     padding: 2px 10px;
+  }
+}
+
+/* ─── TF Panel – Light Theme ─── */
+
+/* The TF panel inside the glass card – now light */
+.dual-panel.tf-panel {
+  background: transparent; /* use the glass card background behind it */
+  border: 1px solid var(--border-light, #e6dcc8);
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  cursor: pointer;
+  width: 100%;
+  min-height: 220px;
+}
+
+.dual-panel.tf-panel:hover {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: var(--copper, #a8632c);
+}
+
+/* Panel icon – keep gold/copper */
+.dual-panel.tf-panel .panel-icon {
+  color: var(--copper, #a8632c);
+  background: rgba(168, 99, 44, 0.08);
+}
+
+/* Headings in light theme */
+.dual-panel.tf-panel h3 {
+  color: var(--ink-light, #2d1f12);
+}
+
+.dual-panel.tf-panel p {
+  color: var(--ink-light-dim, rgba(61, 46, 30, 0.65));
+}
+
+/* ─── Word Cloud ─── */
+.tf-word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 12px 0 8px;
+  min-height: 80px;
+  width: 100%;
+}
+
+.cloud-term {
+  display: inline-block;
+  color: var(--ink-light-dim, #3d2e1e); /* dark brown on light */
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  cursor: default;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.cloud-term:hover {
+  color: var(--copper, #a8632c); /* accent on hover */
+  transform: scale(1.05);
+}
+
+.cloud-loading {
+  color: var(--ink-light-faint, rgba(61, 46, 30, 0.4));
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* ─── CTA (Browse all families) ─── */
+.tf-panel-cta {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--copper, #a8632c);
+  transition: gap 0.2s;
+}
+
+.dual-panel.tf-panel:hover .tf-panel-cta {
+  gap: 12px;
+}
+
+/* ─── Loading / Disabled states ─── */
+.dual-panel.tf-panel.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.dual-panel.tf-panel.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.explorer-card-spinner {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }

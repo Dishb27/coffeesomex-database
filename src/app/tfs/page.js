@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./tfs.module.css";
+import SiteHeader from "@/components/SiteHeader";
 
 export default function TFFamilies() {
   const [families, setFamilies] = useState([]);
@@ -70,16 +71,10 @@ export default function TFFamilies() {
 
   return (
     <div className={styles.appContainer}>
-      <nav className={styles.topNav}>
-        <button className={styles.homeBtn} onClick={goHome} aria-label="Home">
-          <i className="fas fa-home"></i>
-          <span>Home</span>
-        </button>
-        <span className={styles.navTitle}>TF Families</span>
-      </nav>
+      <SiteHeader pageTitle="TF Family Explorer" />
 
       <div className={styles.heroSection}>
-        <h2>Explore TF Families</h2>
+        {/* <h2>Explore TF Families</h2> */}
         <p className={styles.subtitle}>
           Explore the complete collection of transcription factor families and
           members in <em>Coffea arabica</em>.{" "}

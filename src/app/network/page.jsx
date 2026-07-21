@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import * as d3 from "d3";
 import styles from "./network.module.css";
+import SiteHeader from "@/components/SiteHeader";
 
 const COLORS = {
   gold: "#9c7526",
@@ -425,12 +426,13 @@ export default function GRNExplorer() {
   // ---- Render ----
   return (
     <div className={styles.root}>
+      <SiteHeader pageTitle="TF → Hub Gene Consensus Network Explorer" />
       <div className={styles.header}>
         <div className={styles.eyebrow}>Coffea arabica · consensus network</div>
-        <div className={styles.title}>
+        {/* <div className={styles.title}>
           TF → Hub Gene <span className={styles.accent}>Consensus Network</span>{" "}
           Explorer
-        </div>
+        </div> */}
       </div>
 
       {error && (
@@ -604,7 +606,7 @@ export default function GRNExplorer() {
                         <span>{hoverNode.TF_Family}</span>
                       </div>
                     )}
-                    <div className={styles.ttRow}>
+                    {/* <div className={styles.ttRow}>
                       <span>Degree (this view)</span>
                       <span>{hoverNode.degree_view}</span>
                     </div>
@@ -615,7 +617,7 @@ export default function GRNExplorer() {
                     <div className={styles.ttRow}>
                       <span>Module</span>
                       <span>{hoverNode.ModuleColor}</span>
-                    </div>
+                    </div> */}
                   </div>
                 )}
                 <div className={styles.legend}>

@@ -11,6 +11,7 @@ import {
 import { ExpressionProfile } from "@/components/ExpressionProfile";
 import { RetryButton } from "@/components/RetryButton";
 import SiteHeader from "@/components/SiteHeader";
+import { GOAnnotations } from "@/components/GOAnnotations"; // <-- NEW
 
 export default async function GenePage({ params }) {
   const geneId = params.id.toUpperCase();
@@ -218,7 +219,6 @@ export default async function GenePage({ params }) {
     );
 
     gene.transcript_count = validTranscripts.length; // update count
-    //gene.transcript_count = transcripts.length;
 
     console.log(`   Final transcripts array length: ${transcripts.length}`);
     transcripts.forEach((t, idx) => {
@@ -245,9 +245,21 @@ export default async function GenePage({ params }) {
       [geneId],
     );
     console.log(`   TF rows: ${tfRows.length}`);
+
+    // 12. GO annotations  <--- NEW
+    console.log("8️⃣ Fetching GO annotations...");
+    const goRows = await query(
+      `SELECT go_id, go_description, category
+       FROM gene_go_annotations
+       WHERE gene_id = ?
+       ORDER BY category, go_id`,
+      [geneId],
+    );
+    console.log(`   GO rows: ${goRows.length}`);
+
     console.log("✅ Debug complete.\n");
 
-    // 12. Render (unchanged)
+    // 13. Render
     return (
       <div className="gene-page-container">
         <SiteHeader pageTitle={`Gene ${gene.gene_id}`} />
@@ -260,9 +272,10 @@ export default async function GenePage({ params }) {
           />
           <ExpressionProfile expressionRows={expressionRows} />
           <TFFamilies tfRows={tfRows} />
-          <SequenceDivider
+          <GOAnnotations annotations={goRows} /> {/* <-- NEW */}
+          {/* <SequenceDivider
             label={`Gene ${gene.gene_id} · ${gene.gene_biotype}`}
-          />
+          /> */}
         </div>
 
         <footer className="footer" style={{ marginTop: "48px" }}>
@@ -272,10 +285,7 @@ export default async function GenePage({ params }) {
               <button className="footer-link">Contact us</button>
             </div>
           </div>
-          <p className="footer-copy">
-            © 2025 CoffeeDB · Coffee genome reference database · For research
-            use
-          </p>
+          <p className="footer-copy">© 2025 CoffeeDB · For research use</p>
         </footer>
       </div>
     );
