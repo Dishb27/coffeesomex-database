@@ -216,7 +216,7 @@ function downloadFasta(header, sequence, filename) {
   URL.revokeObjectURL(url);
 }
 
-function SequenceBlock({ label, meta, sequence, header, filename }) {
+function SequenceBlock({ label, meta, sequence, header, filename, context }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -245,23 +245,35 @@ function SequenceBlock({ label, meta, sequence, header, filename }) {
           </button>
         </span>
       </div>
+      {context && (
+        <div className="seq-context" style={{ fontSize: "0.85rem", color: "var(--ink-dim)", marginBottom: "8px" }}>
+          {context}
+        </div>
+      )}
       <pre className="sqx-text">{wrapSequence(sequence)}</pre>
     </div>
   );
 }
 
-function downloadAll(geneId, transcripts) {
+// ---- UPDATED downloadAll to include geneProteins ----
+function downloadAll(geneId, transcripts, geneProteins) {
   let content = "";
+  // Transcript‑associated proteins and CDS
   transcripts.forEach((t) => {
-    if (t.protein) {
+    if (t.protein?.sequence) {
       content += `>${t.protein.protein_id} protein | transcript=${t.transcript_id} | gene=${geneId}\n`;
       content += `${wrapSequence(t.protein.sequence)}\n`;
     }
-    if (t.cds_sequence) {
+    if (t.cds_sequence?.sequence) {
       const idTag = t.protein?.protein_id || t.transcript_id;
       content += `>${idTag}_CDS transcript=${t.transcript_id} | gene=${geneId}\n`;
       content += `${wrapSequence(t.cds_sequence.sequence)}\n`;
     }
+  });
+  // Gene‑level proteins (from fallback)
+  geneProteins.forEach((gp) => {
+    content += `>${gp.protein_id} protein (gene‑level) | gene=${geneId}\n`;
+    content += `${wrapSequence(gp.sequence)}\n`;
   });
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -274,11 +286,13 @@ function downloadAll(geneId, transcripts) {
   URL.revokeObjectURL(url);
 }
 
-export function ProteinSequences({ transcripts, geneId }) {
+// ---- UPDATED ProteinSequences to accept geneProteins ----
+export function ProteinSequences({ transcripts, geneId, geneProteins = [] }) {
   // Separate arrays for protein and CDS items
   const proteinItems = [];
   const cdsItems = [];
 
+  // 1. Build items from transcripts (as before)
   transcripts.forEach((t) => {
     const protein = t.protein;
     const proteinSeq = protein?.sequence || t.protein_sequence || null;
@@ -306,14 +320,29 @@ export function ProteinSequences({ transcripts, geneId }) {
     }
   });
 
+  // 2. Add gene‑level proteins from direct query (avoid duplicates)
+  const transcriptIds = transcripts.map((t) => t.transcript_id).join(', ');
+  geneProteins.forEach((gp) => {
+    const alreadyExists = proteinItems.some((item) => item.proteinId === gp.protein_id);
+    if (!alreadyExists) {
+      proteinItems.push({
+        transcriptId: `gene_${gp.protein_id}`, // dummy key
+        proteinId: gp.protein_id,
+        sequence: gp.sequence,
+        length: gp.sequence.length,
+        header: `${gp.protein_id} protein (gene‑level) | gene=${geneId}`,
+        filename: `${gp.protein_id}_protein.fasta`,
+        context: transcriptIds ? `Gene transcripts: ${transcriptIds}` : undefined,
+      });
+    }
+  });
+
   const hasProtein = proteinItems.length > 0;
   const hasCds = cdsItems.length > 0;
 
   // Helper to render a list of sequences inside a card
-  const renderSequenceCard = (items, type, title, badgeText) => {
-    const label = type === "protein" ? "" : "";
+  const renderSequenceCard = (items, type, title) => {
     const metaUnit = type === "protein" ? "amino acids" : "bp";
-
     if (items.length === 0) return null;
 
     return (
@@ -331,16 +360,15 @@ export function ProteinSequences({ transcripts, geneId }) {
               <span className="sqx-entry-sub">from {item.transcriptId}</span>
             </h3>
             <SequenceBlock
-              label={label}
+              label={type === "protein" ? "" : ""}
               meta={`${item.length} ${metaUnit}`}
               sequence={item.sequence}
               header={item.header}
               filename={item.filename}
+              context={item.context}
             />
           </div>
         ))}
-        {/* Optional: Download all for this type */}
-        {/* You can add a download button here if needed */}
       </section>
     );
   };
@@ -359,10 +387,9 @@ export function ProteinSequences({ transcripts, geneId }) {
     );
   }
 
-  // Otherwise, render two separate cards
+  // Otherwise, render two separate cards with a global download button
   return (
     <>
-      {/* Optional: common download-all button at the top (outside cards) */}
       {(hasProtein || hasCds) && (
         <div
           style={{
@@ -374,18 +401,14 @@ export function ProteinSequences({ transcripts, geneId }) {
           <button
             type="button"
             className="sqx-download-all"
-            onClick={() => downloadAll(geneId, transcripts)}
+            onClick={() => downloadAll(geneId, transcripts, geneProteins)}
           >
             ⬇ Download all (FASTA)
           </button>
         </div>
       )}
 
-      {/* Protein card */}
-      {hasProtein &&
-        renderSequenceCard(proteinItems, "protein", "Protein Sequences")}
-
-      {/* CDS card */}
+      {hasProtein && renderSequenceCard(proteinItems, "protein", "Protein Sequences")}
       {hasCds && renderSequenceCard(cdsItems, "cds", "Coding Sequences")}
     </>
   );

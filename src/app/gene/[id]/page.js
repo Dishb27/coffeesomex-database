@@ -11,7 +11,7 @@ import {
 import { ExpressionProfile } from "@/components/ExpressionProfile";
 import { RetryButton } from "@/components/RetryButton";
 import SiteHeader from "@/components/SiteHeader";
-import { GOAnnotations } from "@/components/GOAnnotations"; // <-- NEW
+import { GOAnnotations } from "@/components/GOAnnotations";
 
 export default async function GenePage({ params }) {
   const geneId = params.id.toUpperCase();
@@ -49,15 +49,6 @@ export default async function GenePage({ params }) {
       [geneId],
     );
     console.log(`   Transcripts found: ${transcriptRows.length}`);
-    if (transcriptRows.length > 0) {
-      console.log("   First transcript:", transcriptRows[0].transcript_id);
-      console.log(
-        "   All transcript IDs:",
-        transcriptRows.map((t) => t.transcript_id).join(", "),
-      );
-    } else {
-      console.log("   ⚠️ No transcripts in transcripts table for this gene.");
-    }
 
     // 3. Exons (by gene_id)
     console.log("3️⃣ Fetching exons (by gene_id)...");
@@ -68,18 +59,6 @@ export default async function GenePage({ params }) {
       [geneId],
     );
     console.log(`   Exons found: ${exonRows.length}`);
-    if (exonRows.length > 0) {
-      const sampleExon = exonRows[0];
-      console.log(
-        `   Sample exon: transcript=${sampleExon.transcript_id}, exon=${sampleExon.exon_number}, start=${sampleExon.start}`,
-      );
-      const distinctTids = new Set(exonRows.map((e) => e.transcript_id));
-      console.log(
-        `   Distinct transcript IDs in exons: ${Array.from(distinctTids).join(", ")}`,
-      );
-    } else {
-      console.log("   ⚠️ No exons found for this gene in exons table.");
-    }
 
     // 4. CDS (by gene_id)
     console.log("4️⃣ Fetching CDS (by gene_id)...");
@@ -92,20 +71,38 @@ export default async function GenePage({ params }) {
       [geneId],
     );
     console.log(`   CDS segments found: ${cdsRows.length}`);
-    if (cdsRows.length > 0) {
-      const sampleCds = cdsRows[0];
-      console.log(
-        `   Sample CDS: transcript=${sampleCds.transcript_id}, protein=${sampleCds.protein_id}`,
+
+    // 5. Protein IDs from CDS
+    const proteinIds = [
+      ...new Set(cdsRows.map((c) => c.protein_id).filter(Boolean)),
+    ];
+    console.log(`   Unique protein IDs from CDS: ${proteinIds.length}`);
+
+    let proteinRows = [];
+    if (proteinIds.length > 0) {
+      const pp = proteinIds.map(() => "?").join(",");
+      console.log("5️⃣ Fetching protein sequences via CDS...");
+      proteinRows = await query(
+        `SELECT protein_id, sequence FROM proteins WHERE protein_id IN (${pp})`,
+        proteinIds,
       );
-      const distinctTids = new Set(cdsRows.map((c) => c.transcript_id));
-      console.log(
-        `   Distinct transcript IDs in CDS: ${Array.from(distinctTids).join(", ")}`,
-      );
-    } else {
-      console.log("   ⚠️ No CDS found for this gene in cds table.");
+      console.log(`   Protein rows found via CDS: ${proteinRows.length}`);
     }
 
-    // 5. Build maps
+    // ---- NEW: Direct gene-level protein fetch (fallback) ----
+    console.log("5b️⃣ Fetching proteins directly by gene_id...");
+    const directProteinRows = await query(
+      `SELECT protein_id, sequence FROM proteins WHERE gene_id = ?`,
+      [geneId],
+    );
+    console.log(`   Direct protein rows: ${directProteinRows.length}`);
+
+    // Build proteinMap from CDS-linked proteins
+    const proteinMap = Object.fromEntries(
+      proteinRows.map((p) => [p.protein_id, p]),
+    );
+
+    // 6. Build maps for exons and CDS by transcript
     const exonMap = {};
     exonRows.forEach((e) => {
       (exonMap[e.transcript_id] ??= []).push(e);
@@ -116,30 +113,7 @@ export default async function GenePage({ params }) {
       (cdsMap[c.transcript_id] ??= []).push(c);
     });
 
-    // 6. Protein IDs
-    const proteinIds = [
-      ...new Set(cdsRows.map((c) => c.protein_id).filter(Boolean)),
-    ];
-    console.log(`   Unique protein IDs from CDS: ${proteinIds.length}`);
-    if (proteinIds.length > 0)
-      console.log(`   First few: ${proteinIds.slice(0, 3).join(", ")}`);
-
-    let proteinRows = [];
-    if (proteinIds.length > 0) {
-      const pp = proteinIds.map(() => "?").join(",");
-      console.log("5️⃣ Fetching protein sequences...");
-      proteinRows = await query(
-        `SELECT protein_id, sequence FROM proteins WHERE protein_id IN (${pp})`,
-        proteinIds,
-      );
-      console.log(`   Protein rows found: ${proteinRows.length}`);
-    }
-
-    const proteinMap = Object.fromEntries(
-      proteinRows.map((p) => [p.protein_id, p]),
-    );
-
-    // 7. Build concatenated CDS sequences
+    // 7. Build concatenated CDS sequences per protein
     const cdsSeqMap = {};
     if (cdsRows.length > 0) {
       const cdsByTranscript = {};
@@ -160,15 +134,12 @@ export default async function GenePage({ params }) {
       }
     }
 
-    // 8. Collect all transcript IDs
+    // 8. Collect all transcript IDs from all sources
     const allTranscriptIds = new Set([
       ...transcriptRows.map((t) => t.transcript_id),
       ...Object.keys(exonMap),
       ...Object.keys(cdsMap),
     ]);
-    console.log(
-      `   Total distinct transcript IDs (from transcripts, exons, cds): ${allTranscriptIds.size}`,
-    );
 
     // 9. Build enriched transcripts
     const transcripts = Array.from(allTranscriptIds).map((tid) => {
@@ -212,27 +183,18 @@ export default async function GenePage({ params }) {
       };
     });
 
-    transcripts.sort((a, b) => (a.start || 0) - (b.start || 0));
-    // 🔽 Add this line to remove any malformed transcript IDs
+    // Filter out malformed transcript IDs
     const validTranscripts = transcripts.filter(
       (t) => !t.transcript_id.includes(";"),
     );
-
-    gene.transcript_count = validTranscripts.length; // update count
-
-    console.log(`   Final transcripts array length: ${transcripts.length}`);
-    transcripts.forEach((t, idx) => {
-      console.log(
-        `   [${idx}] ${t.transcript_id}: ${t.exons.length} exons, ${t.cds_segments.length} CDS segments, ${t.protein_sequence ? "has protein" : "no protein"}`,
-      );
-    });
+    gene.transcript_count = validTranscripts.length;
 
     // 10. Expression
     console.log("6️⃣ Fetching expression...");
     const expressionRows = await query(
       `SELECT s.sample_id, s.sample_name, s.stage_tag, s.replicate, e.expression
-   FROM expression e JOIN samples s ON e.stage_tag = s.stage_tag
-   WHERE e.gene_id = ? ORDER BY s.stage_tag, s.replicate`,
+       FROM expression e JOIN samples s ON e.stage_tag = s.stage_tag
+       WHERE e.gene_id = ? ORDER BY s.stage_tag, s.replicate`,
       [geneId],
     );
     console.log(`   Expression rows: ${expressionRows.length}`);
@@ -246,7 +208,7 @@ export default async function GenePage({ params }) {
     );
     console.log(`   TF rows: ${tfRows.length}`);
 
-    // 12. GO annotations  <--- NEW
+    // 12. GO annotations
     console.log("8️⃣ Fetching GO annotations...");
     const goRows = await query(
       `SELECT go_id, go_description, category
@@ -269,13 +231,11 @@ export default async function GenePage({ params }) {
           <ProteinSequences
             transcripts={validTranscripts}
             geneId={gene.gene_id}
+            geneProteins={directProteinRows} // <-- pass fallback proteins
           />
           <ExpressionProfile expressionRows={expressionRows} />
           <TFFamilies tfRows={tfRows} />
-          <GOAnnotations annotations={goRows} /> {/* <-- NEW */}
-          {/* <SequenceDivider
-            label={`Gene ${gene.gene_id} · ${gene.gene_biotype}`}
-          /> */}
+          <GOAnnotations annotations={goRows} />
         </div>
 
         <footer className="footer" style={{ marginTop: "48px" }}>
