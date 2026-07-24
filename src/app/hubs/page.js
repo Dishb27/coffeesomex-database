@@ -3,7 +3,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./hubs.module.css";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
+const PAGE_SIZE = 50;
 
 export default function HubGenes() {
   const [hubGenes, setHubGenes] = useState([]);
@@ -12,6 +14,7 @@ export default function HubGenes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [biotypeFilter, setBiotypeFilter] = useState("all");
   const [navigatingTo, setNavigatingTo] = useState(null);
+  const [page, setPage] = useState(1);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,13 +42,37 @@ export default function HubGenes() {
     });
   }, [hubGenes, searchTerm, biotypeFilter]);
 
-  const goHome = () => router.push("/");
+  // Reset to page 1 whenever the filtered set changes shape
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, biotypeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredGenes.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+
+  const pageGenes = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredGenes.slice(start, start + PAGE_SIZE);
+  }, [filteredGenes, currentPage]);
 
   const goToGene = (geneId) => {
     if (navigatingTo) return;
     setNavigatingTo(geneId);
     router.push(`/gene/${geneId}`);
   };
+
+  const goPrev = () => setPage((p) => Math.max(1, p - 1));
+  const goNext = () => setPage((p) => Math.min(totalPages, p + 1));
+
+  // Compact page-number list: current +/- 2, plus first/last with ellipses
+  const pageNumbers = useMemo(() => {
+    const nums = new Set([1, totalPages, currentPage]);
+    for (let d = 1; d <= 2; d++) {
+      if (currentPage - d >= 1) nums.add(currentPage - d);
+      if (currentPage + d <= totalPages) nums.add(currentPage + d);
+    }
+    return Array.from(nums).sort((a, b) => a - b);
+  }, [currentPage, totalPages]);
 
   if (error) {
     return (
@@ -60,7 +87,6 @@ export default function HubGenes() {
       <SiteHeader pageTitle="Hub Genes Explorer" />
 
       <div className={styles.heroSection}>
-        {/* <h2>Hub Genes Explorer</h2> */}
         <p>
           Explore potential hub genes associated with <em>Coffea arabica</em>{" "}
           somatic embryogenesis.
@@ -68,7 +94,7 @@ export default function HubGenes() {
       </div>
 
       <div className={styles.contentContainer}>
-        {/* ── Filter bar ── */}
+        {/* -- Filter bar -- */}
         <div className={styles.filterBar}>
           <div
             className={styles.searchWrapper}
@@ -76,7 +102,7 @@ export default function HubGenes() {
           >
             <input
               type="text"
-              placeholder="Search by gene ID…"
+              placeholder="Search by gene ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={styles.searchInput}
@@ -111,11 +137,14 @@ export default function HubGenes() {
 
         {!loading && (
           <div className={styles.resultCount}>
-            Showing {filteredGenes.length} of {hubGenes.length} hub genes
+            Showing{" "}
+            {filteredGenes.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}
+            -{Math.min(currentPage * PAGE_SIZE, filteredGenes.length)} of{" "}
+            {filteredGenes.length} hub genes
           </div>
         )}
 
-        {/* ── Loading state: animated header + skeleton grid ── */}
+        {/* -- Loading state: skeleton chip grid -- */}
         {loading && (
           <>
             <div className={styles.hubLoadingHeader}>
@@ -131,79 +160,106 @@ export default function HubGenes() {
                 </span>
               </p>
             </div>
-            <div className={styles.cardsGrid}>
-              {Array.from({ length: 12 }).map((_, i) => (
+            <div className={styles.chipGrid}>
+              {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                 <div
                   key={i}
-                  className={styles.geneCard}
-                  style={{ opacity: 0.6 }}
+                  className={styles.geneChip}
+                  style={{ opacity: 0.5 }}
                 >
-                  <div className={styles.geneCardIconWrap}>
-                    <i className="fas fa-diagram-project"></i>
-                  </div>
-                  <div className={styles.skeletonLine} />
+                  <span className={styles.chipSkeleton} />
                 </div>
               ))}
             </div>
           </>
         )}
 
-        {/* ── Minimal gene card list ── */}
+        {/* -- Compact chip grid of gene IDs -- */}
         {!loading && (
-          <div className={`${styles.cardsGrid} ${styles.fadeIn}`}>
-            {filteredGenes.map((g, i) => {
-              const isLoading = navigatingTo === g.gene_id;
-              const isDisabled = navigatingTo && navigatingTo !== g.gene_id;
-              const hasDistinctSymbol =
-                g.gene_symbol && g.gene_symbol !== g.gene_id;
+          <>
+            <div className={`${styles.chipGrid} ${styles.fadeIn}`}>
+              {pageGenes.map((g) => {
+                const isLoading = navigatingTo === g.gene_id;
+                const isDisabled = navigatingTo && navigatingTo !== g.gene_id;
 
-              return (
-                <div
-                  key={g.gene_id}
-                  className={`${styles.geneCard} ${isLoading ? styles.geneCardLoading : ""} ${
-                    isDisabled ? styles.geneCardDisabled : ""
-                  }`}
-                  style={{ animationDelay: `${Math.min(i * 20, 300)}ms` }}
-                  onClick={() => goToGene(g.gene_id)}
-                  role="button"
-                  tabIndex={isDisabled ? -1 : 0}
-                  aria-busy={isLoading}
-                >
-                  <div className={styles.geneCardIconWrap}>
+                return (
+                  <button
+                    key={g.gene_id}
+                    className={`${styles.geneChip} ${
+                      isLoading ? styles.geneChipLoading : ""
+                    } ${isDisabled ? styles.geneChipDisabled : ""}`}
+                    onClick={() => goToGene(g.gene_id)}
+                    disabled={isDisabled}
+                    aria-busy={isLoading}
+                    title={`View ${g.gene_id}`}
+                  >
                     {isLoading ? (
                       <i
-                        className={`fas fa-circle-notch ${styles.geneCardSpinner}`}
+                        className={`fas fa-circle-notch ${styles.geneChipSpinner}`}
+                        aria-hidden="true"
                       ></i>
                     ) : (
-                      <i className="fas fa-diagram-project"></i>
+                      <i
+                        className="fas fa-diagram-project"
+                        aria-hidden="true"
+                      ></i>
                     )}
-                  </div>
+                    <span className={styles.geneChipId}>{g.gene_id}</span>
+                  </button>
+                );
+              })}
 
-                  <h3 className={styles.geneCardId}>
-                    {hasDistinctSymbol ? g.gene_symbol : g.gene_id}
-                  </h3>
-
-                  {hasDistinctSymbol && (
-                    <code className={styles.geneCardSubId}>{g.gene_id}</code>
-                  )}
-
-                  {g.gene_biotype && (
-                    <span className={styles.biotypeBadge}>
-                      {g.gene_biotype}
-                    </span>
-                  )}
+              {filteredGenes.length === 0 && (
+                <div className={styles.noResults}>
+                  No hub genes match your filters.
                 </div>
-              );
-            })}
+              )}
+            </div>
 
-            {filteredGenes.length === 0 && (
-              <div className={styles.noResults}>
-                No hub genes match your filters.
+            {/* -- Pagination -- */}
+            {filteredGenes.length > PAGE_SIZE && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.pageNavBtn}
+                  onClick={goPrev}
+                  disabled={currentPage === 1}
+                >
+                  <i className="fas fa-chevron-left"></i>
+                </button>
+
+                {pageNumbers.map((n, idx) => {
+                  const prev = pageNumbers[idx - 1];
+                  const showEllipsis = prev !== undefined && n - prev > 1;
+                  return (
+                    <React.Fragment key={n}>
+                      {showEllipsis && (
+                        <span className={styles.pageEllipsis}>...</span>
+                      )}
+                      <button
+                        className={`${styles.pageNumBtn} ${
+                          n === currentPage ? styles.pageNumActive : ""
+                        }`}
+                        onClick={() => setPage(n)}
+                      >
+                        {n}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+                <button
+                  className={styles.pageNavBtn}
+                  onClick={goNext}
+                  disabled={currentPage === totalPages}
+                >
+                  <i className="fas fa-chevron-right"></i>
+                </button>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
+      <SiteFooter />
     </div>
   );
 }

@@ -12,56 +12,57 @@ import { ExpressionProfile } from "@/components/ExpressionProfile";
 import { RetryButton } from "@/components/RetryButton";
 import SiteHeader from "@/components/SiteHeader";
 import { GOAnnotations } from "@/components/GOAnnotations";
+import SiteFooter from "@/components/SiteFooter";
+
+// A protein row is "real" only if it has an id and a sequence that isn't the
+// literal placeholder string some source files use for missing data.
+function isRealProtein(p) {
+  return (
+    p &&
+    p.protein_id &&
+    p.protein_id !== "NA" &&
+    p.sequence &&
+    p.sequence !== "NA"
+  );
+}
 
 export default async function GenePage({ params }) {
   const geneId = params.id.toUpperCase();
-  console.log("\n🔍 ===== GenePage debug for", geneId, "=====");
 
   try {
     // 1. Gene
-    console.log("1️⃣ Fetching gene...");
     const geneRows = await query(
       `SELECT gene_id, seqname, source, start_pos AS start, end_pos AS end,
               strand, gene_biotype, description
        FROM genes WHERE gene_id = ?`,
       [geneId],
     );
-    console.log(`   Gene rows: ${geneRows.length}`);
-    if (geneRows.length === 0) {
-      console.log("   ❌ Gene not found – calling notFound()");
-      notFound();
-    }
+    if (geneRows.length === 0) notFound();
     const gene = geneRows[0];
 
-    // Remove trailing (LOCxxxxxxxxx) from description
     if (gene.description) {
       gene.description = gene.description.replace(/\s*\(LOC\d+\)$/, "");
     }
 
-    console.log("   ✅ Gene found:", gene.gene_id);
-
     // 2. Transcripts
-    console.log("2️⃣ Fetching transcripts...");
     const transcriptRows = await query(
       `SELECT transcript_id, source, start_pos AS start, end_pos AS end,
               strand, transcript_biotype, product
        FROM transcripts WHERE gene_id = ? ORDER BY start`,
       [geneId],
     );
-    console.log(`   Transcripts found: ${transcriptRows.length}`);
 
-    // 3. Exons (by gene_id)
-    console.log("3️⃣ Fetching exons (by gene_id)...");
+    // 3. Exons
     const exonRows = await query(
       `SELECT transcript_id, exon_number, start_pos AS start, end_pos AS end, strand
        FROM exons WHERE gene_id = ?
        ORDER BY transcript_id, exon_number`,
       [geneId],
     );
-    console.log(`   Exons found: ${exonRows.length}`);
 
-    // 4. CDS (by gene_id)
-    console.log("4️⃣ Fetching CDS (by gene_id)...");
+    // 4. CDS — only meaningful once this table has rows for a gene.
+    // When empty (as it is today) every downstream CDS-derived structure
+    // below simply stays empty, and the UI falls back to gene-level proteins.
     const cdsRows = await query(
       `SELECT transcript_id, cds_id, protein_id,
               start_pos AS start, end_pos AS end, strand,
@@ -70,39 +71,34 @@ export default async function GenePage({ params }) {
        ORDER BY transcript_id, start`,
       [geneId],
     );
-    console.log(`   CDS segments found: ${cdsRows.length}`);
+    const hasCdsData = cdsRows.length > 0;
 
-    // 5. Protein IDs from CDS
-    const proteinIds = [
-      ...new Set(cdsRows.map((c) => c.protein_id).filter(Boolean)),
-    ];
-    console.log(`   Unique protein IDs from CDS: ${proteinIds.length}`);
+    // 5. Proteins linked via CDS.protein_id (only queried if CDS exists)
+    const proteinIdsFromCds = hasCdsData
+      ? [...new Set(cdsRows.map((c) => c.protein_id).filter(Boolean))]
+      : [];
 
-    let proteinRows = [];
-    if (proteinIds.length > 0) {
-      const pp = proteinIds.map(() => "?").join(",");
-      console.log("5️⃣ Fetching protein sequences via CDS...");
-      proteinRows = await query(
-        `SELECT protein_id, sequence FROM proteins WHERE protein_id IN (${pp})`,
-        proteinIds,
+    let proteinRowsFromCds = [];
+    if (proteinIdsFromCds.length > 0) {
+      const placeholders = proteinIdsFromCds.map(() => "?").join(",");
+      proteinRowsFromCds = await query(
+        `SELECT protein_id, sequence FROM proteins WHERE protein_id IN (${placeholders})`,
+        proteinIdsFromCds,
       );
-      console.log(`   Protein rows found via CDS: ${proteinRows.length}`);
     }
+    const proteinMap = Object.fromEntries(
+      proteinRowsFromCds.filter(isRealProtein).map((p) => [p.protein_id, p]),
+    );
 
-    // ---- NEW: Direct gene-level protein fetch (fallback) ----
-    console.log("5b️⃣ Fetching proteins directly by gene_id...");
-    const directProteinRows = await query(
+    // 6. Gene-level proteins (direct fallback — this is the path that
+    // currently carries all real protein data since `cds` is empty)
+    const directProteinRowsRaw = await query(
       `SELECT protein_id, sequence FROM proteins WHERE gene_id = ?`,
       [geneId],
     );
-    console.log(`   Direct protein rows: ${directProteinRows.length}`);
+    const directProteinRows = directProteinRowsRaw.filter(isRealProtein);
 
-    // Build proteinMap from CDS-linked proteins
-    const proteinMap = Object.fromEntries(
-      proteinRows.map((p) => [p.protein_id, p]),
-    );
-
-    // 6. Build maps for exons and CDS by transcript
+    // 7. Group exons / CDS by transcript
     const exonMap = {};
     exonRows.forEach((e) => {
       (exonMap[e.transcript_id] ??= []).push(e);
@@ -113,18 +109,21 @@ export default async function GenePage({ params }) {
       (cdsMap[c.transcript_id] ??= []).push(c);
     });
 
-    // 7. Build concatenated CDS sequences per protein
+    // 8. Concatenated CDS sequence per protein (only runs when CDS has data)
     const cdsSeqMap = {};
-    if (cdsRows.length > 0) {
+    if (hasCdsData) {
       const cdsByTranscript = {};
       cdsRows.forEach((c) => {
         (cdsByTranscript[c.transcript_id] ??= []).push(c);
       });
-      for (const [transcriptId, segs] of Object.entries(cdsByTranscript)) {
+      for (const segs of Object.values(cdsByTranscript)) {
         segs.sort((a, b) => a.start - b.start);
-        const fullSeq = segs.map((s) => s.sequence).join("");
+        const fullSeq = segs
+          .map((s) => s.sequence)
+          .filter(Boolean)
+          .join("");
         const proteinId = segs[0].protein_id;
-        if (proteinId) {
+        if (proteinId && fullSeq) {
           cdsSeqMap[proteinId] = {
             protein_id: proteinId,
             sequence: fullSeq,
@@ -134,14 +133,14 @@ export default async function GenePage({ params }) {
       }
     }
 
-    // 8. Collect all transcript IDs from all sources
+    // 9. Union of transcript IDs from every source that mentions one
     const allTranscriptIds = new Set([
       ...transcriptRows.map((t) => t.transcript_id),
       ...Object.keys(exonMap),
       ...Object.keys(cdsMap),
     ]);
 
-    // 9. Build enriched transcripts
+    // 10. Enriched transcripts
     const transcripts = Array.from(allTranscriptIds).map((tid) => {
       const existing = transcriptRows.find((t) => t.transcript_id === tid);
       const base = existing
@@ -165,13 +164,6 @@ export default async function GenePage({ params }) {
         ? cdsSeqMap[cds.protein_id] || null
         : null;
 
-      let protein_sequence = null;
-      if (protein?.sequence) {
-        protein_sequence = protein.sequence;
-      } else if (cdsSequence?.sequence) {
-        protein_sequence = cdsSequence.sequence;
-      }
-
       return {
         ...base,
         exons: exonMap[tid] || [],
@@ -179,37 +171,31 @@ export default async function GenePage({ params }) {
         cds_segments: cdsSegments,
         protein,
         cds_sequence: cdsSequence,
-        protein_sequence,
+        protein_sequence: protein?.sequence || cdsSequence?.sequence || null,
       };
     });
 
-    // Filter out malformed transcript IDs
     const validTranscripts = transcripts.filter(
       (t) => !t.transcript_id.includes(";"),
     );
     gene.transcript_count = validTranscripts.length;
 
-    // 10. Expression
-    console.log("6️⃣ Fetching expression...");
+    // 11. Expression
     const expressionRows = await query(
       `SELECT s.sample_id, s.sample_name, s.stage_tag, s.replicate, e.expression
        FROM expression e JOIN samples s ON e.stage_tag = s.stage_tag
        WHERE e.gene_id = ? ORDER BY s.stage_tag, s.replicate`,
       [geneId],
     );
-    console.log(`   Expression rows: ${expressionRows.length}`);
 
-    // 11. Transcription factors
-    console.log("7️⃣ Fetching transcription factors...");
+    // 12. Transcription factors
     const tfRows = await query(
       `SELECT tf_id AS protein_id, family AS tf_family
        FROM transcription_factors WHERE gene_id = ?`,
       [geneId],
     );
-    console.log(`   TF rows: ${tfRows.length}`);
 
-    // 12. GO annotations
-    console.log("8️⃣ Fetching GO annotations...");
+    // 13. GO annotations
     const goRows = await query(
       `SELECT go_id, go_description, category
        FROM gene_go_annotations
@@ -217,11 +203,7 @@ export default async function GenePage({ params }) {
        ORDER BY category, go_id`,
       [geneId],
     );
-    console.log(`   GO rows: ${goRows.length}`);
 
-    console.log("✅ Debug complete.\n");
-
-    // 13. Render
     return (
       <div className="gene-page-container">
         <SiteHeader pageTitle={`Gene ${gene.gene_id}`} />
@@ -231,26 +213,20 @@ export default async function GenePage({ params }) {
           <ProteinSequences
             transcripts={validTranscripts}
             geneId={gene.gene_id}
-            geneProteins={directProteinRows} // <-- pass fallback proteins
+            geneProteins={directProteinRows}
+            hasCdsData={hasCdsData}
           />
-          <ExpressionProfile expressionRows={expressionRows} />
-          <TFFamilies tfRows={tfRows} />
-          <GOAnnotations annotations={goRows} />
+          {expressionRows.length > 0 && (
+            <ExpressionProfile expressionRows={expressionRows} />
+          )}
+          {tfRows.length > 0 && <TFFamilies tfRows={tfRows} />}
+          {goRows.length > 0 && <GOAnnotations annotations={goRows} />}
         </div>
-
-        <footer className="footer" style={{ marginTop: "48px" }}>
-          <div className="footer-inner">
-            <CoffeeDBLogo />
-            <div className="footer-links">
-              <button className="footer-link">Contact us</button>
-            </div>
-          </div>
-          <p className="footer-copy">© 2025 CoffeeDB · For research use</p>
-        </footer>
+        <SiteFooter />
       </div>
     );
   } catch (error) {
-    console.error("🔥 Unhandled error in GenePage:", error);
+    console.error("Unhandled error in GenePage:", error);
     return (
       <div className="gene-page-container" style={{ padding: "40px 20px" }}>
         <div

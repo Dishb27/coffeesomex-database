@@ -3,7 +3,7 @@
   min-height: 100vh;
   background: var(--bg-light, #faf6ee);
   font-family: var(--font-body, "Inter", sans-serif);
-  padding-bottom: 60px;
+  padding-top: 90px;
 }
 
 /* ── Top Navigation ── */
@@ -51,7 +51,6 @@
   padding: 2rem 1rem 1.5rem;
   max-width: 700px;
   margin: 0 auto;
-  margin-top: 50px;
 }
 .heroSection h2 {
   font-family: var(--font-display, "Fraunces", serif);
@@ -94,7 +93,7 @@
   box-shadow: 0 0 0 3px rgba(168, 99, 44, 0.1);
 }
 
-/* ── Cards Grid ── */
+/* ── Cards Grid (kept for other views; hub genes page now uses .genesList below) ── */
 .cardsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -191,6 +190,7 @@
   border-radius: 50px;
   font-size: 0.7rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 .location {
   font-size: 0.75rem;
@@ -271,6 +271,14 @@
   }
   .cardsGrid {
     grid-template-columns: 1fr;
+  }
+  .geneListInfo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+  .chipGrid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 }
 
@@ -579,7 +587,7 @@
   box-shadow: 0 6px 16px rgba(168, 99, 44, 0.25);
 }
 
-/* ── Minimal Gene Card ── */
+/* ── Minimal Gene Card (kept for other views) ── */
 .geneCard {
   background: #fff;
   border-radius: 14px;
@@ -760,4 +768,273 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ══════════════════════════════════════════
+   NEW: Gene List (used by the hub genes page
+   instead of .cardsGrid/.geneCard above)
+   ══════════════════════════════════════════ */
+.genesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--line-on-light, #e0d8d0);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+  padding: 0.5rem;
+}
+
+.geneListRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+.geneListRow:not(:last-child) {
+  border-bottom: 1px solid var(--line-on-light, #f0ebe4);
+}
+.geneListRow:nth-child(even) {
+  background: rgba(243, 230, 204, 0.25);
+}
+.geneListRow:hover {
+  background: var(--gold-bg, #f3e6cc);
+}
+.geneListRow:hover .geneListChevron {
+  transform: translateX(3px);
+  color: var(--copper, #a8632c);
+}
+
+.geneListRank {
+  flex-shrink: 0;
+  width: 1.6rem;
+  text-align: right;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.75rem;
+  color: var(--ink-on-light-faint, #b3a894);
+}
+
+.geneListIconWrap {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gold-bg, #f3e6cc);
+  color: var(--copper, #a8632c);
+  font-size: 1rem;
+}
+
+.geneListInfo {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.geneListSymbol {
+  font-family: var(--font-display, "Fraunces", serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-on-light, #2a2016);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Gene ID rendered as an obvious, clickable-looking link chip.
+   The whole row navigates on click, but this makes it unmistakable
+   that the ID itself is the thing that takes you to /gene/[gene_id]. */
+.geneListIdLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--copper, #a8632c);
+  background: var(--gold-bg, #f3e6cc);
+  padding: 0.15rem 0.6rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.geneListIdLink i {
+  font-size: 0.65rem;
+  opacity: 0.75;
+}
+.geneListRow:hover .geneListIdLink {
+  background: var(--copper, #a8632c);
+  color: #fff;
+}
+
+.geneListChevron {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--ink-on-light-faint, #ccc);
+  transition:
+    transform 0.15s ease,
+    color 0.15s ease;
+}
+
+.geneListRowLoading {
+  background: rgba(201, 162, 75, 0.1);
+  box-shadow: 0 0 0 1px var(--gold, #c9a24b) inset;
+}
+.geneListRowDisabled {
+  opacity: 0.35;
+  pointer-events: none;
+  filter: grayscale(40%);
+}
+.geneListSpinner {
+  animation: gene-list-spin 0.7s linear infinite;
+}
+@keyframes gene-list-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ══════════════════════════════════════════
+   NEW: Compact chip grid + pagination
+   (current hub genes page layout — many small
+   gene-ID chips per screen instead of one row
+   or one card per gene)
+   ══════════════════════════════════════════ */
+.chipGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.geneChip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #fff;
+  border: 1px solid var(--line-on-light, #e0d8d0);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.78rem;
+  color: var(--ink-on-light, #2a2016);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.geneChip i {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--copper, #a8632c);
+}
+.geneChip:hover:not(:disabled) {
+  background: var(--gold-bg, #f3e6cc);
+  border-color: var(--copper, #a8632c);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(168, 99, 44, 0.12);
+}
+
+.geneChipId {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geneChipLoading {
+  border-color: var(--gold, #c9a24b);
+  background: rgba(201, 162, 75, 0.1);
+}
+.geneChipDisabled {
+  opacity: 0.35;
+  filter: grayscale(40%);
+  cursor: default;
+}
+.geneChipSpinner {
+  animation: gene-list-spin 0.7s linear infinite;
+}
+
+.chipSkeleton {
+  height: 12px;
+  width: 70%;
+  background: #f0ebe4;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.chipSkeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(168, 99, 44, 0.12) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: hub-shimmer 1.6s ease-in-out infinite;
+}
+
+/* -- Pagination -- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.pageNavBtn,
+.pageNumBtn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--line-on-light, #ddd);
+  background: #fff;
+  color: var(--ink-on-light-dim, #555);
+  font-size: 0.85rem;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+.pageNavBtn:hover:not(:disabled),
+.pageNumBtn:hover {
+  background: var(--gold-bg, #f3e6cc);
+  border-color: var(--copper, #a8632c);
+}
+.pageNavBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.pageNumActive {
+  background: var(--copper, #a8632c);
+  border-color: var(--copper, #a8632c);
+  color: #fff;
+  font-weight: 600;
+}
+.pageEllipsis {
+  color: var(--ink-on-light-faint, #999);
+  padding: 0 0.2rem;
 }

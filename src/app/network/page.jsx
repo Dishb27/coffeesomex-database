@@ -10,6 +10,7 @@ import React, {
 import * as d3 from "d3";
 import styles from "./network.module.css";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 const COLORS = {
   gold: "#9c7526",
@@ -515,7 +516,7 @@ export default function GRNExplorer() {
             <span>
               Edges shown: {edges.length} / {meta.totalEdges ?? "…"}
             </span>
-            <span>Isolated in view: {isolatedCount}</span>
+            {/* <span>Isolated in view: {isolatedCount}</span> */}
           </div>
 
           <div className={styles.tabs}>
@@ -764,6 +765,7 @@ export default function GRNExplorer() {
           )}
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }

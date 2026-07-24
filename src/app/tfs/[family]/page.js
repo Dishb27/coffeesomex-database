@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "./family.module.css";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function FamilyDetail() {
   const params = useParams();
@@ -207,6 +208,7 @@ export default function FamilyDetail() {
           </div>
         )}
       </div>
+      <SiteFooter />
     </div>
   );
 }

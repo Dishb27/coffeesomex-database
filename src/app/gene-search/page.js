@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CoffeeDBLogo } from "@/components/CoffeeDBLogo";
-import { ContactModal } from "@/components/ContactModal";
+import SiteFooter from "@/components/SiteFooter";
 import {
   Dna,
   Network,
@@ -93,8 +93,6 @@ function SequenceDivider({ label }) {
     </div>
   );
 }
-
-// ── Background SVGs ─────────────────────────────────────────────────────
 
 function ConsoleSequenceBG() {
   const bases = "ATCGGCTACGATTGCACGTAGCTTACGGATCCGATGCATTGCAGCTAGATCGTAGCATCG";
@@ -228,7 +226,6 @@ function NetworkGraphBG({ large = false }) {
     );
   }
 
-  // Larger, denser network
   const hubs = [
     [24, 45],
     [76, 40],
@@ -324,27 +321,23 @@ export default function GeneSearchPage() {
   const [geneId, setGeneId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showContact, setShowContact] = useState(false);
   const [navigatingTo, setNavigatingTo] = useState(null);
+  const [exploreTab, setExploreTab] = useState("gene"); // "gene" | "tf"
 
-  // ── TF families state (now with gene counts) ──
-  const [tfData, setTfData] = useState([]); // array of { family, gene_count }
+  const [tfData, setTfData] = useState([]);
   const [familiesLoading, setFamiliesLoading] = useState(true);
 
   const exploreRef = useReveal();
 
-  // ── Fetch TF family data ──
   useEffect(() => {
     async function fetchFamilies() {
       try {
         const res = await fetch("/api/tf-families");
         if (!res.ok) throw new Error("Failed to fetch families");
         const data = await res.json();
-        // Expect data: [{ family: "bHLH", gene_count: 230 }, ...]
         setTfData(data);
       } catch (err) {
         console.error("Error fetching TF families:", err);
-        // Fallback with dummy counts for preview
         const fallback = [
           "bHLH",
           "MYB",
@@ -363,13 +356,12 @@ export default function GeneSearchPage() {
     fetchFamilies();
   }, []);
 
-  // ── Handlers ──
   async function handleSearch(id) {
-    const query = (id || geneId).trim();
-    if (!query) return;
+    const q = (id || geneId).trim();
+    if (!q) return;
     setLoading(true);
     setError("");
-    router.push(`/gene/${query.toUpperCase()}`);
+    router.push(`/gene/${q.toUpperCase()}`);
     setLoading(false);
   }
 
@@ -379,19 +371,17 @@ export default function GeneSearchPage() {
     router.push(path);
   }
 
-  // ── Word cloud scaling ──
   const maxCount = tfData.length
     ? Math.max(...tfData.map((f) => f.gene_count))
     : 1;
 
   return (
     <div className="landing-page">
-      {/* ── Creative Hero ── */}
+      {/* ── Hero ── */}
       <section className="hero">
         <div className="hero-bg" aria-hidden="true" />
         <div className="hero-overlay" aria-hidden="true" />
 
-        {/* Floating decorative elements */}
         <div className="hero-float hero-float-1" aria-hidden="true">
           <svg
             viewBox="0 0 24 24"
@@ -468,205 +458,180 @@ export default function GeneSearchPage() {
 
       <SequenceDivider label="" />
 
-      {/* ── Explore Genes ── */}
+      {/* ── Explore Genes — tabbed console ── */}
       <section className="explorer-section explore-genes" ref={exploreRef}>
         <div className="explorer-inner">
           <div className="explorer-header">
             <h2>Explore Genes</h2>
             <p>
-              Search and explore <em>Coffea arabica</em> genes by gene ID to
-              access genomic annotations, or browse the collection of
-              transcription factor families.
+              Search <em>Coffea arabica</em> genes by ID, or switch modes to
+              browse the collection of transcription factor families.
             </p>
           </div>
 
-          <div className="explore-dual-card">
-            <ConsoleSequenceBG />
+          <div className="explore-console-card">
+            {/* <ConsoleSequenceBG /> */}
 
-            <div className="dual-card-inner">
-              {/* ── Left: Gene lookup ── */}
-              <div className="dual-panel gene-panel">
-                <div className="panel-icon">
-                  <Search size={24} strokeWidth={1.5} />
-                </div>
-                <h3>Find Gene</h3>
-                <p>
-                  Search by gene ID to access structure, transcripts, and
-                  function.
-                </p>
+            <div className="explore-console-inner">
+              {/* Tab switcher */}
+              <div
+                className="explore-tabs"
+                role="tablist"
+                aria-label="Gene explorer mode"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={exploreTab === "gene"}
+                  className={`explore-tab ${exploreTab === "gene" ? "active" : ""}`}
+                  onClick={() => setExploreTab("gene")}
+                >
+                  <Search size={16} strokeWidth={1.8} />
+                  Find a Gene
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={exploreTab === "tf"}
+                  className={`explore-tab ${exploreTab === "tf" ? "active" : ""}`}
+                  onClick={() => setExploreTab("tf")}
+                >
+                  <Dna size={16} strokeWidth={1.8} />
+                  TF Families
+                </button>
+                <span
+                  className="explore-tab-indicator"
+                  style={{
+                    transform:
+                      exploreTab === "tf"
+                        ? "translateX(100%)"
+                        : "translateX(0)",
+                  }}
+                  aria-hidden="true"
+                />
+              </div>
 
-                <div className="gene-console-compact">
-                  <div className="console-input-row">
-                    <input
-                      type="text"
-                      value={geneId}
-                      onChange={(e) => {
-                        setGeneId(e.target.value);
-                        setError("");
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      placeholder="LOC113687214"
-                      spellCheck={false}
-                      autoComplete="off"
-                      aria-label="Gene ID"
-                      className="console-input"
-                    />
-                    <button
-                      className="console-submit"
-                      onClick={() => handleSearch()}
-                      disabled={loading}
-                      aria-label="Find gene"
-                    >
-                      {loading ? (
-                        <Loader2 size={17} className="explorer-card-spinner" />
-                      ) : (
-                        <ArrowRight size={17} />
+              {/* Panel content — keyed so it re-mounts (and re-animates) on switch */}
+              {exploreTab === "gene" ? (
+                <div className="explore-tab-panel" key="gene-panel">
+                  <p className="explore-panel-desc">
+                    Search by gene ID to access structure, transcripts, and
+                    function.
+                  </p>
+
+                  <div className="gene-console-compact">
+                    <div className="console-input-row">
+                      <input
+                        type="text"
+                        value={geneId}
+                        onChange={(e) => {
+                          setGeneId(e.target.value);
+                          setError("");
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                        placeholder="LOC113687214"
+                        spellCheck={false}
+                        autoComplete="off"
+                        aria-label="Gene ID"
+                        className="console-input"
+                      />
+                      <button
+                        className="console-submit"
+                        onClick={() => handleSearch()}
+                        disabled={loading}
+                        aria-label="Find gene"
+                      >
+                        {loading ? (
+                          <Loader2
+                            size={17}
+                            className="explorer-card-spinner"
+                          />
+                        ) : (
+                          <ArrowRight size={17} />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="console-quick">
+                      <span className="console-quick-label">Try:</span>
+                      {["LOC113688632", "LOC140004316", "LOC113736396"].map(
+                        (id) => (
+                          <button
+                            key={id}
+                            className="hero-chip"
+                            onClick={() => {
+                              setGeneId(id);
+                              handleSearch(id);
+                            }}
+                          >
+                            {id}
+                          </button>
+                        ),
                       )}
-                    </button>
-                  </div>
+                    </div>
 
-                  <div className="console-quick">
-                    <span className="console-quick-label">Try:</span>
-                    {["LOC113688632", "LOC140004316", "LOC113736396"].map(
-                      (id) => (
-                        <button
-                          key={id}
-                          className="hero-chip"
-                          onClick={() => {
-                            setGeneId(id);
-                            handleSearch(id);
-                          }}
-                        >
-                          {id}
-                        </button>
-                      ),
+                    {error && (
+                      <div className="hero-error" role="alert">
+                        No record found for <span>{error}</span>.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="explore-tab-panel" key="tf-panel">
+                  <div className="tf-word-cloud">
+                    {familiesLoading ? (
+                      <span className="cloud-loading">Loading families…</span>
+                    ) : (
+                      tfData.map(({ family, gene_count }) => {
+                        const minSize = 0.75;
+                        const maxSize = 1.6;
+                        const size =
+                          maxCount > 0
+                            ? minSize +
+                              (gene_count / maxCount) * (maxSize - minSize)
+                            : minSize;
+                        return (
+                          <button
+                            key={family}
+                            type="button"
+                            className="cloud-term"
+                            style={{
+                              fontSize: `${size}rem`,
+                              fontWeight:
+                                gene_count > maxCount * 0.7 ? 600 : 400,
+                              opacity: 0.55 + (gene_count / maxCount) * 0.45,
+                            }}
+                            onClick={() =>
+                              handleExplorerNav(
+                                "tfs",
+                                `/tfs?family=${encodeURIComponent(family)}`,
+                              )
+                            }
+                          >
+                            {family}
+                          </button>
+                        );
+                      })
                     )}
                   </div>
 
-                  {error && (
-                    <div className="hero-error" role="alert">
-                      No record found for <span>{error}</span>.
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    className="explore-tf-cta"
+                    onClick={() => handleExplorerNav("tfs", "/tfs")}
+                    disabled={navigatingTo === "tfs"}
+                  >
+                    {navigatingTo === "tfs" ? (
+                      <Loader2 size={16} className="explorer-card-spinner" />
+                    ) : (
+                      <>
+                        Browse all families <ArrowRight size={15} />
+                      </>
+                    )}
+                  </button>
                 </div>
-              </div>
-
-              {/* ── Vertical Divider (DNA helix) ── */}
-              <div className="dna-divider" aria-hidden="true">
-                <svg
-                  viewBox="0 0 20 100"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M10 0 L10 100"
-                    stroke="#d9b877"
-                    strokeWidth="0.5"
-                    strokeDasharray="2 4"
-                    opacity="0.4"
-                  />
-                  <circle cx="10" cy="10" r="2" fill="#d9b877" opacity="0.6" />
-                  <circle cx="10" cy="30" r="2" fill="#d9b877" opacity="0.6" />
-                  <circle cx="10" cy="50" r="2" fill="#d9b877" opacity="0.6" />
-                  <circle cx="10" cy="70" r="2" fill="#d9b877" opacity="0.6" />
-                  <circle cx="10" cy="90" r="2" fill="#d9b877" opacity="0.6" />
-                  <path
-                    d="M3 16 C3 6, 17 6, 17 16"
-                    stroke="#d9b877"
-                    strokeWidth="0.8"
-                    fill="none"
-                    opacity="0.3"
-                  />
-                  <path
-                    d="M3 36 C3 26, 17 26, 17 36"
-                    stroke="#d9b877"
-                    strokeWidth="0.8"
-                    fill="none"
-                    opacity="0.3"
-                  />
-                  <path
-                    d="M3 56 C3 46, 17 46, 17 56"
-                    stroke="#d9b877"
-                    strokeWidth="0.8"
-                    fill="none"
-                    opacity="0.3"
-                  />
-                  <path
-                    d="M3 76 C3 66, 17 66, 17 76"
-                    stroke="#d9b877"
-                    strokeWidth="0.8"
-                    fill="none"
-                    opacity="0.3"
-                  />
-                  <path
-                    d="M3 96 C3 86, 17 86, 17 96"
-                    stroke="#d9b877"
-                    strokeWidth="0.8"
-                    fill="none"
-                    opacity="0.3"
-                  />
-                </svg>
-              </div>
-
-              {/* ── Right: TF Families – WORD CLOUD ── */}
-              <div
-                className={`dual-panel tf-panel ${
-                  navigatingTo === "tfs" ? "is-loading" : ""
-                } ${navigatingTo && navigatingTo !== "tfs" ? "is-disabled" : ""}`}
-                role="button"
-                tabIndex={navigatingTo && navigatingTo !== "tfs" ? -1 : 0}
-                aria-busy={navigatingTo === "tfs"}
-                onClick={() => handleExplorerNav("tfs", "/tfs")}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && handleExplorerNav("tfs", "/tfs")
-                }
-              >
-                <div className="panel-icon">
-                  <Dna size={24} strokeWidth={1.5} />
-                </div>
-                <h3>Explore TF Families</h3>
-
-                {/* ── Word Cloud ── */}
-                <div className="tf-word-cloud">
-                  {familiesLoading ? (
-                    <span className="cloud-loading">Loading families…</span>
-                  ) : (
-                    tfData.map(({ family, gene_count }) => {
-                      // Scale font size between 0.7rem and 1.4rem
-                      const minSize = 0.7;
-                      const maxSize = 1.4;
-                      const size =
-                        maxCount > 0
-                          ? minSize +
-                            (gene_count / maxCount) * (maxSize - minSize)
-                          : minSize;
-                      return (
-                        <span
-                          key={family}
-                          className="cloud-term"
-                          style={{
-                            fontSize: `${size}rem`,
-                            fontWeight: gene_count > maxCount * 0.7 ? 600 : 400,
-                            opacity: 0.5 + (gene_count / maxCount) * 0.5,
-                          }}
-                        >
-                          {family}
-                        </span>
-                      );
-                    })
-                  )}
-                </div>
-
-                <div className="tf-panel-cta">
-                  {navigatingTo === "tfs" ? (
-                    <Loader2 size={16} className="explorer-card-spinner" />
-                  ) : (
-                    <>
-                      Browse all families <ArrowRight size={15} />
-                    </>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -674,7 +639,7 @@ export default function GeneSearchPage() {
 
       <SequenceDivider label="" />
 
-      {/* ── SE Expression Profiles (3 dark cards) ── */}
+      {/* ── SE Expression Profiles ── */}
       <section className="explorer-section expression-profiles">
         <div className="explorer-inner">
           <div className="explorer-header">
@@ -686,11 +651,8 @@ export default function GeneSearchPage() {
           </div>
 
           <div className="cards-grid">
-            {/* DEG Comparisons */}
             <div
-              className={`feature-card deg-card ${
-                navigatingTo === "comparisions" ? "is-loading" : ""
-              } ${
+              className={`feature-card deg-card ${navigatingTo === "comparisions" ? "is-loading" : ""} ${
                 navigatingTo && navigatingTo !== "comparisions"
                   ? "is-disabled"
                   : ""
@@ -724,11 +686,10 @@ export default function GeneSearchPage() {
               </div>
             </div>
 
-            {/* Hub Genes */}
             <div
-              className={`feature-card hub-card ${
-                navigatingTo === "hubs" ? "is-loading" : ""
-              } ${navigatingTo && navigatingTo !== "hubs" ? "is-disabled" : ""}`}
+              className={`feature-card hub-card ${navigatingTo === "hubs" ? "is-loading" : ""} ${
+                navigatingTo && navigatingTo !== "hubs" ? "is-disabled" : ""
+              }`}
               role="button"
               tabIndex={navigatingTo && navigatingTo !== "hubs" ? -1 : 0}
               aria-busy={navigatingTo === "hubs"}
@@ -755,11 +716,8 @@ export default function GeneSearchPage() {
               </div>
             </div>
 
-            {/* Regulatory Networks */}
             <div
-              className={`feature-card network-card ${
-                navigatingTo === "network" ? "is-loading" : ""
-              } ${
+              className={`feature-card network-card ${navigatingTo === "network" ? "is-loading" : ""} ${
                 navigatingTo && navigatingTo !== "network" ? "is-disabled" : ""
               }`}
               role="button"
@@ -816,23 +774,7 @@ export default function GeneSearchPage() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <CoffeeDBLogo />
-          <div className="footer-links">
-            <button
-              className="footer-link"
-              onClick={() => setShowContact(true)}
-            >
-              Contact us
-            </button>
-          </div>
-        </div>
-        <p className="footer-copy">© 2025 CoffeeSomEx · For research use</p>
-      </footer>
-
-      {showContact && <ContactModal onClose={() => setShowContact(false)} />}
+      <SiteFooter />
     </div>
   );
 }

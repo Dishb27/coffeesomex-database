@@ -3,8 +3,9 @@
   min-height: 100vh;
   background: var(--bg-light, #faf6ee);
   font-family: var(--font-body, "Inter", sans-serif);
-  padding-bottom: 60px;
   margin-top: 40px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---- Hero ---- */
@@ -386,4 +387,17 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ---- Families Container (wrap around search, tabs and grid) ---- */
+.familiesContainer {
+  flex: 1; /* pushes footer down when content is short */
+  margin-bottom: 32px; /* gap between content and footer */
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }

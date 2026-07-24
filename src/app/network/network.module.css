@@ -67,6 +67,7 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  padding-top: 20px; /* <-- add this */
 }
 
 /* --- Sidebar --- */
@@ -474,11 +475,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: background 0.15s;
 }
 .zoomBtn:hover {
-  background: rgba(156,117,38,0.12);
+  background: rgba(156, 117, 38, 0.12);
 }
 .zoomBtn:active {
   transform: scale(0.94);
@@ -523,7 +524,7 @@
 }
 
 .pageBtn {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   padding: 6px 16px;
   border-radius: 6px;
@@ -534,7 +535,7 @@
   transition: background 0.15s;
 }
 .pageBtn:hover:not(:disabled) {
-  background: rgba(156,117,38,0.08);
+  background: rgba(156, 117, 38, 0.08);
 }
 .pageBtn:disabled {
   opacity: 0.4;
@@ -542,7 +543,7 @@
 }
 
 .pageInfo {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   color: var(--inkDim);
   min-width: 100px;
@@ -551,5 +552,7 @@
 
 /* Keep spinner animation consistent */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

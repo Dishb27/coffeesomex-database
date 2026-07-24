@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./tfs.module.css";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function TFFamilies() {
   const [families, setFamilies] = useState([]);
@@ -181,6 +182,7 @@ export default function TFFamilies() {
           </div>
         </div>
       )}
+      <SiteFooter />
     </div>
   );
 }

@@ -37,9 +37,7 @@ export function CoffeeDBLogo({ className = "" }) {
       <img
         src="/images/logo.png"
         alt="CoffeeSomEx logo"
-        className="coffeedb-logo-image"
-        height="32"
-        width="auto"
+        style={{ height: "50px", width: "auto" }}
       />
     </div>
   );

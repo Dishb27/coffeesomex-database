@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 const PADDING = { top: 24, right: 24, bottom: 56, left: 64 };
 const POINT_RADIUS = 2.4;
 const HOVER_RADIUS = 6;
+const TOOLTIP_WIDTH = 170;
 
 function scaleLinear(domain, range) {
   const [d0, d1] = domain;
@@ -25,22 +26,11 @@ export function VolcanoPlot({
   const router = useRouter();
   const [size, setSize] = useState({ width: 720, height: 460 });
   const [hover, setHover] = useState(null); // { point, screenX, screenY }
+  const [isTouch, setIsTouch] = useState(false);
 
-  // Thresholds are editable in the UI -- until you confirm the exact values
-  // your DESeq2/edgeR pipeline used, these defaults are just a starting point.
-  const [padjCutoff, setPadjCutoff] = useState(defaultPadjCutoff);
-  const [log2fcCutoff, setLog2fcCutoff] = useState(defaultLog2fcCutoff);
-  const [padjInput, setPadjInput] = useState(String(defaultPadjCutoff));
-  const [log2fcInput, setLog2fcInput] = useState(String(defaultLog2fcCutoff));
+  const [padjCutoff] = useState(defaultPadjCutoff);
+  const [log2fcCutoff] = useState(defaultLog2fcCutoff);
 
-  function applyThresholds() {
-    const p = parseFloat(padjInput);
-    const f = parseFloat(log2fcInput);
-    if (!Number.isNaN(p) && p > 0 && p <= 1) setPadjCutoff(p);
-    if (!Number.isNaN(f) && f >= 0) setLog2fcCutoff(f);
-  }
-
-  // Precompute plot-space coordinates once per dataset
   const plotPoints = useMemo(() => {
     return points
       .map((p) => {
@@ -53,7 +43,7 @@ export function VolcanoPlot({
           log2FoldChange: fc,
           padj,
           x: fc,
-          y: Math.min(-Math.log10(padj), 300), // clip extreme -log10 values
+          y: Math.min(-Math.log10(padj), 300),
         };
       })
       .filter(Boolean);
@@ -72,13 +62,14 @@ export function VolcanoPlot({
     return [0, Math.max(...ys) * 1.08];
   }, [plotPoints]);
 
-  // Resize observer so the canvas fills its container responsively
+  // Resize observer — clamps to the wrapper's own width so the canvas never
+  // exceeds its container (avoids triggering horizontal page scroll on mobile).
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
       const w = entries[0].contentRect.width;
-      setSize({ width: Math.max(320, w), height: Math.max(320, w * 0.58) });
+      setSize({ width: Math.max(280, w), height: Math.max(260, w * 0.62) });
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -97,13 +88,12 @@ export function VolcanoPlot({
     (p) => {
       const isSig =
         p.padj < padjCutoff && Math.abs(p.log2FoldChange) >= log2fcCutoff;
-      if (!isSig) return "rgba(156, 143, 120, 0.35)"; // muted, not significant
-      return p.regulation === "Upregulated" ? "#4f7a52" : "#b5603c"; // sage / copper
+      if (!isSig) return "rgba(156, 143, 120, 0.35)";
+      return p.regulation === "Upregulated" ? "#4f7a52" : "#b5603c";
     },
     [padjCutoff, log2fcCutoff],
   );
 
-  // Draw
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -116,7 +106,10 @@ export function VolcanoPlot({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, size.width, size.height);
 
-    // Axes
+    // Fill background so the exported PNG isn't transparent
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, size.width, size.height);
+
     ctx.strokeStyle = "#e6dcc8";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -125,7 +118,6 @@ export function VolcanoPlot({
     ctx.lineTo(size.width - PADDING.right, size.height - PADDING.bottom);
     ctx.stroke();
 
-    // Threshold lines (dashed) -- reflect the current, user-editable cutoffs
     ctx.save();
     ctx.setLineDash([4, 4]);
     ctx.strokeStyle = "#c9a45c";
@@ -146,7 +138,6 @@ export function VolcanoPlot({
     });
     ctx.restore();
 
-    // Points
     plotPoints.forEach((p) => {
       const px = xScale(p.x);
       const py = yScale(p.y);
@@ -156,7 +147,6 @@ export function VolcanoPlot({
       ctx.fill();
     });
 
-    // Hover highlight
     if (hover) {
       const px = xScale(hover.point.x);
       const py = yScale(hover.point.y);
@@ -167,7 +157,6 @@ export function VolcanoPlot({
       ctx.stroke();
     }
 
-    // Axis labels
     ctx.fillStyle = "#6b5f4d";
     ctx.font = '12px "IBM Plex Mono", monospace';
     ctx.textAlign = "center";
@@ -180,10 +169,9 @@ export function VolcanoPlot({
     ctx.fillText("-log₁₀(padj)", 0, 0);
     ctx.restore();
 
-    // Tick labels (x)
     ctx.textAlign = "center";
     ctx.font = '10px "IBM Plex Mono", monospace';
-    const xTicks = 5;
+    const xTicks = size.width < 420 ? 3 : 5;
     for (let i = 0; i <= xTicks; i++) {
       const v = xExtent[0] + ((xExtent[1] - xExtent[0]) * i) / xTicks;
       ctx.fillText(v.toFixed(1), xScale(v), size.height - PADDING.bottom + 16);
@@ -200,15 +188,13 @@ export function VolcanoPlot({
     log2fcCutoff,
   ]);
 
-  const handleMouseMove = useCallback(
-    (e) => {
+  const findNearest = useCallback(
+    (clientX, clientY) => {
       const rect = canvasRef.current.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-
+      const mx = clientX - rect.left;
+      const my = clientY - rect.top;
       let nearest = null;
-      let nearestDist = 10; // px radius for hit detection
-
+      let nearestDist = 14;
       for (const p of plotPoints) {
         const px = xScale(p.x);
         const py = yScale(p.y);
@@ -218,14 +204,21 @@ export function VolcanoPlot({
           nearest = p;
         }
       }
-
-      if (nearest) {
-        setHover({ point: nearest, screenX: e.clientX, screenY: e.clientY });
-      } else {
-        setHover(null);
-      }
+      return nearest;
     },
     [plotPoints, xScale, yScale],
+  );
+
+  const handleMouseMove = useCallback(
+    (e) => {
+      const nearest = findNearest(e.clientX, e.clientY);
+      setHover(
+        nearest
+          ? { point: nearest, screenX: e.clientX, screenY: e.clientY }
+          : null,
+      );
+    },
+    [findNearest],
   );
 
   const handleClick = useCallback(() => {
@@ -234,83 +227,92 @@ export function VolcanoPlot({
     }
   }, [hover, router]);
 
+  // Touch support: first tap inspects the nearest point, tapping again on
+  // an already-selected point navigates to the gene page.
+  const handleTouchStart = useCallback(
+    (e) => {
+      setIsTouch(true);
+      const touch = e.touches[0];
+      if (!touch) return;
+      const nearest = findNearest(touch.clientX, touch.clientY);
+      if (nearest && hover?.point?.gene_id === nearest.gene_id) {
+        router.push(`/gene/${nearest.gene_id}`);
+        return;
+      }
+      setHover(
+        nearest
+          ? { point: nearest, screenX: touch.clientX, screenY: touch.clientY }
+          : null,
+      );
+    },
+    [findNearest, hover, router],
+  );
+
+  function handleDownloadPNG() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    const safeName = (comparisonLabel || "volcano-plot").replace(/\s+/g, "_");
+    link.download = `${safeName}_volcano.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
+
+  // Clamp tooltip so it never renders off-screen (important on narrow phones)
+  const tooltipStyle = useMemo(() => {
+    if (!hover || !wrapRef.current) return null;
+    const wrapRect = wrapRef.current.getBoundingClientRect();
+    let left = hover.screenX - wrapRect.left + 12;
+    let top = hover.screenY - wrapRect.top - 8;
+    if (left + TOOLTIP_WIDTH > wrapRect.width) {
+      left = hover.screenX - wrapRect.left - TOOLTIP_WIDTH - 12;
+    }
+    if (left < 0) left = 4;
+    if (top < 0) top = 4;
+    return { left, top };
+  }, [hover]);
+
   return (
     <div className="volcano-wrap" ref={wrapRef}>
       <div className="volcano-header">
         <h3>Volcano plot{comparisonLabel ? ` — ${comparisonLabel}` : ""}</h3>
-        <div className="volcano-legend">
-          <span>
-            <i className="dot dot-up" /> Upregulated
-          </span>
-          <span>
-            <i className="dot dot-down" /> Downregulated
-          </span>
-          <span>
-            <i className="dot dot-ns" /> Not significant
-          </span>
+        <div className="volcano-header-actions">
+          <div className="volcano-legend">
+            <span>
+              <i className="dot dot-up" /> Upregulated
+            </span>
+            <span>
+              <i className="dot dot-down" /> Downregulated
+            </span>
+            <span>
+              <i className="dot dot-ns" /> Not significant
+            </span>
+          </div>
+          <button
+            type="button"
+            className="volcano-download-btn"
+            onClick={handleDownloadPNG}
+            title="Download plot as PNG"
+          >
+            ⬇ PNG
+          </button>
         </div>
       </div>
-
-      {/* Editable thresholds -- update these once you know your pipeline's
-          actual cutoffs; the dashed lines and point colors update live. */}
-      {/* <div className="volcano-threshold-controls">
-        <label>
-          padj &lt;
-          <input
-            type="number"
-            step="0.001"
-            min="0"
-            max="1"
-            value={padjInput}
-            onChange={(e) => setPadjInput(e.target.value)}
-            onBlur={applyThresholds}
-            onKeyDown={(e) => e.key === "Enter" && applyThresholds()}
-          />
-        </label>
-        <label>
-          |log₂FC| ≥
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            value={log2fcInput}
-            onChange={(e) => setLog2fcInput(e.target.value)}
-            onBlur={applyThresholds}
-            onKeyDown={(e) => e.key === "Enter" && applyThresholds()}
-          />
-        </label>
-        <button
-          type="button"
-          className="volcano-apply-btn"
-          onClick={applyThresholds}
-        >
-          Apply
-        </button>
-        <span className="volcano-threshold-note">
-          (defaults shown — adjust once your actual cutoffs are confirmed)
-        </span>
-      </div> */}
 
       <div className="volcano-canvas-wrap">
         <canvas
           ref={canvasRef}
           onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHover(null)}
+          onMouseLeave={() => !isTouch && setHover(null)}
           onClick={handleClick}
+          onTouchStart={handleTouchStart}
           style={{ cursor: hover ? "pointer" : "crosshair" }}
         />
 
-        {hover && (
+        {hover && tooltipStyle && (
           <div
             className="volcano-tooltip"
-            style={{
-              left:
-                hover.screenX -
-                wrapRef.current.getBoundingClientRect().left +
-                12,
-              top:
-                hover.screenY - wrapRef.current.getBoundingClientRect().top - 8,
-            }}
+            style={{ left: tooltipStyle.left, top: tooltipStyle.top }}
           >
             <div className="volcano-tooltip-gene">{hover.point.gene_id}</div>
             <div className="volcano-tooltip-row">
@@ -319,16 +321,16 @@ export function VolcanoPlot({
             <div className="volcano-tooltip-row">
               padj: <strong>{hover.point.padj.toExponential(2)}</strong>
             </div>
-            <div className="volcano-tooltip-hint">Click to view gene →</div>
+            <div className="volcano-tooltip-hint">
+              {isTouch ? "Tap again to view gene →" : "Click to view gene →"}
+            </div>
           </div>
         )}
       </div>
 
-      {/* <p className="volcano-caption">
-        Dashed lines mark significance thresholds (padj &lt; {padjCutoff},
-        |log₂FC| ≥ {log2fcCutoff}). Showing {plotPoints.length.toLocaleString()}{" "}
-        genes.
-      </p> */}
+      <p className="volcano-caption">
+        Showing {plotPoints.length.toLocaleString()} genes.
+      </p>
     </div>
   );
 }

@@ -5,7 +5,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { VolcanoPlot } from "@/components/VolcanoPlot";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 
+function DetailSkeleton() {
+  return (
+    <div className="detail-skeleton">
+      <div className="skeleton-loader">
+        <span className="bean-dot" />
+        <span className="bean-dot" />
+        <span className="bean-dot" />
+      </div>
+      <p className="skeleton-label">Loading comparison…</p>
+      <div className="skeleton-bars">
+        <div className="skeleton-bar w-70" />
+        <div className="skeleton-bar w-40" />
+        <div className="skeleton-bar w-90" />
+        <div className="skeleton-bar w-60" />
+        <div className="skeleton-bar w-80" />
+      </div>
+    </div>
+  );
+}
 
 export default function ComparisionsPage() {
   const router = useRouter();
@@ -16,6 +36,7 @@ export default function ComparisionsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState("");
   const [search, setSearch] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   // Detail-view controls
   const [page, setPage] = useState(1);
@@ -125,6 +146,10 @@ export default function ComparisionsPage() {
 
   function selectComparison(comp) {
     setSelected(comp);
+    // Clear stale data immediately so the skeleton loader shows right away
+    // instead of a blank panel or the previous comparison's table.
+    setDetail(null);
+    setDetailError("");
     setPage(1);
     setRegFilter("all");
     setGeneSearchInput("");
@@ -134,6 +159,10 @@ export default function ComparisionsPage() {
     setShowVolcano(false);
     setVolcanoData(null);
     setVolcanoError("");
+  }
+
+  function backToList() {
+    setSelected(null);
   }
 
   function toggleSort(key) {
@@ -150,6 +179,58 @@ export default function ComparisionsPage() {
     const n = Number(v);
     if (Number.isNaN(n)) return "—";
     return n < 0.0001 ? n.toExponential(2) : n.toFixed(4);
+  }
+
+  // Downloads the FULL filtered result set (not just the current page) as CSV
+  async function handleDownloadCSV() {
+    if (!selected || downloading) return;
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams({
+        page: "1",
+        pageSize: "1000000",
+        regulation: regFilter,
+        sortKey,
+        sortDir,
+        search: geneSearch,
+      });
+      const res = await fetch(
+        `/api/comparisions/${encodeURIComponent(selected)}?${params.toString()}`,
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to export data");
+
+      const rows = data.data || [];
+      const header = "gene_id,regulation,log2FoldChange,pvalue,padj,baseMean";
+      const csvBody = rows
+        .map((r) =>
+          [
+            r.gene_id,
+            r.regulation,
+            r.log2FoldChange,
+            r.pvalue ?? "",
+            r.padj ?? "",
+            r.baseMean ?? "",
+          ].join(","),
+        )
+        .join("\n");
+
+      const blob = new Blob([`${header}\n${csvBody}`], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${selected.replace(/\s+/g, "_")}_DEG.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDownloading(false);
+    }
   }
 
   const filteredList = comparisions.filter((c) =>
@@ -173,12 +254,10 @@ export default function ComparisionsPage() {
 
   return (
     <>
-      <SiteHeader pageTitle="SE Developmetal stage comparisons explorer" />
-      
+      <SiteHeader pageTitle="SE Developmetal Stage Comparisons Explorer" />
 
       <div className="comparisions-page">
         <div className="comparisions-header">
-          {/* <h2>Developmental stage comparisons</h2> */}
           <p>
             Explore differentially expressed genes across{" "}
             <em>Coffea arabica</em> somatic embryo developmental stages. Select
@@ -188,12 +267,20 @@ export default function ComparisionsPage() {
         </div>
 
         {loading ? (
-          <div className="comparisions-loading">Loading comparisons…</div>
+          <div className="comparisions-loading">
+            <div className="skeleton-loader">
+              <span className="bean-dot" />
+              <span className="bean-dot" />
+              <span className="bean-dot" />
+            </div>
+            Loading comparisons…
+          </div>
         ) : (
-          <div className="comparisions-grid">
+          <div
+            className={`comparisions-grid ${selected ? "has-selection" : ""}`}
+          >
             <div className="comparisions-list">
               <div className="list-header">
-                {/* <h2>Comparisons</h2> */}
                 <input
                   type="text"
                   className="list-search"
@@ -241,8 +328,15 @@ export default function ComparisionsPage() {
                 </div>
               )}
 
+              {selected && loadingDetail && !detail && !detailError && (
+                <DetailSkeleton />
+              )}
+
               {selected && detailError && !loadingDetail && (
                 <div className="detail-error">
+                  <button className="back-to-list-btn" onClick={backToList}>
+                    ← Back to comparisons
+                  </button>
                   <p>⚠️ {detailError}</p>
                   <button className="retry-btn" onClick={fetchDetail}>
                     Retry
@@ -252,6 +346,10 @@ export default function ComparisionsPage() {
 
               {selected && detail && !detailError && (
                 <div className="detail-content">
+                  <button className="back-to-list-btn" onClick={backToList}>
+                    ← Back to comparisons
+                  </button>
+
                   <div className="detail-header">
                     <h2>{detail.comparision}</h2>
                     <div className="detail-summary">
@@ -263,18 +361,36 @@ export default function ComparisionsPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className="volcano-toggle-btn"
-                    onClick={() => setShowVolcano((v) => !v)}
-                  >
-                    {showVolcano ? "Hide" : "Show"} volcano plot
-                  </button>
+                  <div className="detail-actions-row">
+                    <button
+                      type="button"
+                      className="volcano-toggle-btn"
+                      onClick={() => setShowVolcano((v) => !v)}
+                    >
+                      {showVolcano ? "Hide" : "Show"} volcano plot
+                    </button>
+
+                    <button
+                      type="button"
+                      className="download-csv-btn"
+                      onClick={handleDownloadCSV}
+                      disabled={downloading}
+                    >
+                      {downloading ? "Preparing…" : "⬇ Download CSV"}
+                    </button>
+                  </div>
 
                   {showVolcano && (
                     <>
                       {loadingVolcano && (
-                        <div className="detail-loading">Loading plot data…</div>
+                        <div className="detail-loading">
+                          <div className="skeleton-loader small">
+                            <span className="bean-dot" />
+                            <span className="bean-dot" />
+                            <span className="bean-dot" />
+                          </div>
+                          Loading plot data…
+                        </div>
                       )}
                       {volcanoError && !loadingVolcano && (
                         <div className="detail-error">
@@ -341,7 +457,13 @@ export default function ComparisionsPage() {
 
                   <div className="detail-table-wrap" aria-busy={loadingDetail}>
                     {loadingDetail && (
-                      <div className="table-loading-overlay">Loading…</div>
+                      <div className="table-loading-overlay">
+                        <div className="skeleton-loader small">
+                          <span className="bean-dot" />
+                          <span className="bean-dot" />
+                          <span className="bean-dot" />
+                        </div>
+                      </div>
                     )}
                     <table className="deg-table">
                       <thead>
@@ -356,16 +478,6 @@ export default function ComparisionsPage() {
                             {sortKey === "abslog2fc" &&
                               (sortDir === "asc" ? "↑" : "↓")}
                           </th>
-                          {/* <th>p-value</th> */}
-                          {/* <th
-                            className="sortable"
-                            onClick={() => toggleSort("padj")}
-                          >
-                            adj. p{" "}
-                            {sortKey === "padj" &&
-                              (sortDir === "asc" ? "↑" : "↓")}
-                          </th> */}
-                          {/* <th>Base Mean</th> */}
                         </tr>
                       </thead>
                       <tbody>
@@ -396,9 +508,6 @@ export default function ComparisionsPage() {
                             >
                               {Number(row.log2FoldChange).toFixed(3)}
                             </td>
-                            {/* <td>{formatPval(row.pvalue)}</td> */}
-                            {/* <td>{formatPval(row.padj)}</td>
-                            <td>{Number(row.baseMean).toFixed(1)}</td> */}
                           </tr>
                         ))}
                       </tbody>
@@ -452,6 +561,7 @@ export default function ComparisionsPage() {
             </div>
           </div>
         )}
+        <SiteFooter />
       </div>
     </>
   );
