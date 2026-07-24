@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.0",
+    "@vercel/analytics": "^2.0.1",
     "csv-parse": "^7.0.1",
     "cytoscape": "^3.34.0",
     "d3": "^7.9.0",
