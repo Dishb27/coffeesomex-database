@@ -673,7 +673,7 @@ export default function GeneSearchPage() {
                 <div className="feature-card-icon">
                   <GitMerge size={26} strokeWidth={1.5} />
                 </div>
-                <h3>Explore SE Developmental Stage Comparisons</h3>
+                <h3>Explore DEGs</h3>
                 <div className="feature-card-footer">
                   <span className="feature-card-chip">
                     {navigatingTo === "comparisions" ? (

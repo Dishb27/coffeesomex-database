@@ -18,7 +18,7 @@ export default function SiteFooter() {
 
           <nav className="footer-nav" aria-label="Site sections">
             <Link href="/comparisions" className="footer-nav-link">
-              DEG Comparisons
+              DEGs
             </Link>
             <Link href="/hubs" className="footer-nav-link">
               Hub Genes
