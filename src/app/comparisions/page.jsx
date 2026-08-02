@@ -54,12 +54,47 @@ export default function ComparisionsPage() {
   const [loadingVolcano, setLoadingVolcano] = useState(false);
   const [volcanoError, setVolcanoError] = useState("");
 
-  // Load the left-hand comparison list once
+  // ---- Desired order (exact sequence) ----
+  const ORDER = [
+    "L1 vs D1",
+    "D1 vs D2",
+    "D2 vs D3",
+    "D3 vs C1",
+    "C1 vs C2",
+    "C2 vs C3",
+    "C3 vs R1",
+    "R1 vs R2",
+    "R2 vs R3",
+    "R3 vs R4",
+    "R4 vs E1",
+  ];
+
+  // Normalize a comparison string for matching (trim, replace underscores with spaces, lowercase)
+  const normalize = (str) => str.trim().replace(/_/g, " ").toLowerCase();
+
+  // Build a map from normalized name to its priority index
+  const orderMap = new Map();
+  ORDER.forEach((name, idx) => {
+    orderMap.set(normalize(name), idx);
+  });
+
+  // Load the left-hand comparison list once and sort it
   useEffect(() => {
     fetch("/api/comparisions")
       .then((res) => res.json())
       .then((data) => {
-        setComparisions(Array.isArray(data) ? data : []);
+        const raw = Array.isArray(data) ? data : [];
+        // Sort according to the custom ORDER (normalized)
+        const sorted = raw.slice().sort((a, b) => {
+          const normA = normalize(a.comparison);
+          const normB = normalize(b.comparison);
+          const idxA = orderMap.has(normA) ? orderMap.get(normA) : Infinity;
+          const idxB = orderMap.has(normB) ? orderMap.get(normB) : Infinity;
+          if (idxA !== idxB) return idxA - idxB;
+          // If both are unknown, keep their original relative order (stable)
+          return 0;
+        });
+        setComparisions(sorted);
         setLoading(false);
       })
       .catch((err) => {
@@ -147,7 +182,6 @@ export default function ComparisionsPage() {
   function selectComparison(comp) {
     setSelected(comp);
     // Clear stale data immediately so the skeleton loader shows right away
-    // instead of a blank panel or the previous comparison's table.
     setDetail(null);
     setDetailError("");
     setPage(1);
