@@ -35,10 +35,10 @@ export function GeneHeader({ gene, tfCount }) {
           <span className="label">Chromosome</span>
           <span className="value">{gene.seqname || "—"}</span>
         </div>
-        <div className="gene-meta-item">
+        {/* <div className="gene-meta-item">
           <span className="label">Source</span>
           <span className="value">{gene.source || "—"}</span>
-        </div>
+        </div> */}
         <div className="gene-meta-item">
           <span className="label">Start</span>
           <span className="value mono">{gene.start.toLocaleString()}</span>
@@ -51,18 +51,18 @@ export function GeneHeader({ gene, tfCount }) {
           <span className="label">Length (bp)</span>
           <span className="value mono">{geneLength.toLocaleString()}</span>
         </div>
-        <div className="gene-meta-item">
+        {/* <div className="gene-meta-item">
           <span className="label">Strand</span>
           <span className="value mono">{gene.strand || "—"}</span>
-        </div>
+        </div> */}
         <div className="gene-meta-item">
           <span className="label">Biotype</span>
           <span className="value">{gene.gene_biotype || "—"}</span>
         </div>
-        <div className="gene-meta-item">
+        {/* <div className="gene-meta-item">
           <span className="label">DB Xref</span>
           <span className="value mono">{gene.db_xref || "—"}</span>
-        </div>
+        </div> */}
       </div>
     </header>
   );
