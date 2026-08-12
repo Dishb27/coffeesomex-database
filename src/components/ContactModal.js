@@ -6,6 +6,7 @@ export function ContactModal({ onClose }) {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     function onKeyDown(e) {
@@ -22,11 +23,31 @@ export function ContactModal({ onClose }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) return;
+
     setSubmitting(true);
-    // Simulate submission — replace with real API call
-    await new Promise((r) => setTimeout(r, 700));
-    setSubmitting(false);
-    setSent(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || "Something went wrong. Please try again.",
+        );
+      }
+
+      setSent(true);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -40,7 +61,7 @@ export function ContactModal({ onClose }) {
           <div className="form-success">
             <div className="form-success-icon">✓</div>
             <h3>Message sent</h3>
-            <p>We'll get back to you shortly.</p>
+            <p>Thank you for reaching out. We'll get back to you soon.</p>
           </div>
         ) : (
           <>
@@ -89,12 +110,14 @@ export function ContactModal({ onClose }) {
                 <textarea
                   id="cf-message"
                   className="form-textarea"
-                  placeholder="What would you like to ask?"
+                  placeholder="Your Message"
                   value={form.message}
                   onChange={update("message")}
                   required
                 />
               </div>
+
+              {error && <p className="form-error">{error}</p>}
 
               <button
                 className="form-submit"
