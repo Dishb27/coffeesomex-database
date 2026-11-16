@@ -757,7 +757,7 @@ export default function GeneSearchPage() {
           {[
             { num: "12", label: "SE Developmental stages" },
             { num: "22850", label: "Differentially expressed genes" },
-            { num: "23", label: "Co-expression modules" },
+            { num: "22", label: "Co-expression modules" },
             { num: "230", label: "Hub genes" },
           ].map((s, i) => (
             <div
