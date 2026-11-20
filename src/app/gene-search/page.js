@@ -756,9 +756,9 @@ export default function GeneSearchPage() {
         <div className="stats-inner">
           {[
             { num: "12", label: "SE Developmental stages" },
-            { num: "22850", label: "Differentially expressed genes" },
+            { num: "17929", label: "Differentially expressed genes" },
             { num: "22", label: "Co-expression modules" },
-            { num: "230", label: "Hub genes" },
+            { num: "220", label: "Hub genes" },
           ].map((s, i) => (
             <div
               key={s.label}
